@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+command:
+  timeoutSec: 10
+  timeoutScanMs: 2000
+
+gateway:
+  baseUrl: http://localhost:8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

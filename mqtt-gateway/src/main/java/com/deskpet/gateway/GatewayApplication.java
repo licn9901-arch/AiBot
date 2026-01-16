@@ -61,7 +61,11 @@ public class GatewayApplication {
         }
 
         String authUrl = config.coreInternalBaseUrl() + "/internal/auth";
-        webClient.getAbs(authUrl)
+        var authRequest = webClient.getAbs(authUrl);
+        if (!config.internalToken().isBlank()) {
+            authRequest.putHeader("X-Internal-Token", config.internalToken());
+        }
+        authRequest
                 .addQueryParam("deviceId", deviceId)
                 .addQueryParam("secret", password)
                 .send(ar -> {
@@ -109,7 +113,11 @@ public class GatewayApplication {
         String targetPath = topic.endsWith("/telemetry") ? "/internal/telemetry/" : "/internal/ack/";
         String url = config.coreInternalBaseUrl() + targetPath + deviceId;
         Buffer payload = message.payload();
-        webClient.postAbs(url)
+        var postRequest = webClient.postAbs(url);
+        if (!config.internalToken().isBlank()) {
+            postRequest.putHeader("X-Internal-Token", config.internalToken());
+        }
+        postRequest
                 .sendBuffer(payload, ar -> {
                     if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
                         EndpointSession session = sessions.get(deviceId);
@@ -133,7 +141,11 @@ public class GatewayApplication {
         GatewayPresenceRequest request = new GatewayPresenceRequest(deviceId, config.instanceId(), ip);
         try {
             String body = objectMapper.writeValueAsString(request);
-            webClient.postAbs(url)
+            var presenceRequest = webClient.postAbs(url);
+            if (!config.internalToken().isBlank()) {
+                presenceRequest.putHeader("X-Internal-Token", config.internalToken());
+            }
+            presenceRequest
                     .putHeader("Content-Type", "application/json")
                     .sendBuffer(Buffer.buffer(body), ar -> {
                         if (ar.failed()) {
@@ -149,6 +161,15 @@ public class GatewayApplication {
         Router router = Router.router(vertx);
         router.route().handler(io.vertx.ext.web.handler.BodyHandler.create());
         router.post("/internal/command/send").handler(ctx -> {
+            if (!config.internalToken().isBlank()) {
+                String token = ctx.request().getHeader("X-Internal-Token");
+                if (!config.internalToken().equals(token)) {
+                    ctx.response().setStatusCode(401)
+                            .putHeader("Content-Type", "application/json")
+                            .end(new JsonObject().put("ok", false).put("reason", "INVALID_INTERNAL_TOKEN").encode());
+                    return;
+                }
+            }
             String body = ctx.body().asString(StandardCharsets.UTF_8);
             try {
                 SendCommandRequest request = objectMapper.readValue(body, SendCommandRequest.class);

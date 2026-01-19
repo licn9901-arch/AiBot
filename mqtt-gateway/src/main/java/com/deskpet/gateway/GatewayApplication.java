@@ -2,6 +2,8 @@ package com.deskpet.gateway;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
@@ -11,9 +13,10 @@ import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.core.net.SocketAddress;
-import io.vertx.mqtt.MqttQoS;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -21,6 +24,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GatewayApplication {
+    private static final Logger log = LoggerFactory.getLogger(GatewayApplication.class);
+
     private final Vertx vertx;
     private final GatewayConfig config;
     private final WebClient webClient;
@@ -43,7 +48,7 @@ public class GatewayApplication {
     public void start() {
         startMqttServer();
         startInternalHttp();
-        System.out.printf("Gateway started: mqtt=%d internal=%d%n", config.mqttPort(), config.internalPort());
+        log.info("Gateway started: mqtt={} internal={}", config.mqttPort(), config.internalPort());
     }
 
     private void startMqttServer() {
@@ -56,7 +61,7 @@ public class GatewayApplication {
         String username = endpoint.auth() != null ? endpoint.auth().getUsername() : null;
         String password = endpoint.auth() != null ? endpoint.auth().getPassword() : null;
         if (username == null || password == null || !deviceId.equals(username)) {
-            endpoint.reject(MqttEndpoint.MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+            endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             return;
         }
 
@@ -70,7 +75,7 @@ public class GatewayApplication {
                 .addQueryParam("secret", password)
                 .send(ar -> {
                     if (ar.failed() || ar.result().statusCode() != 200) {
-                        endpoint.reject(MqttEndpoint.MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
                         return;
                     }
                     endpoint.accept(false);
@@ -149,11 +154,11 @@ public class GatewayApplication {
                     .putHeader("Content-Type", "application/json")
                     .sendBuffer(Buffer.buffer(body), ar -> {
                         if (ar.failed()) {
-                            System.err.printf("Presence notify failed for %s%n", deviceId);
+                            log.warn("Presence notify failed for {}", deviceId);
                         }
                     });
         } catch (Exception e) {
-            System.err.printf("Presence notify error: %s%n", e.getMessage());
+            log.error("Presence notify error: {}", e.getMessage(), e);
         }
     }
 
@@ -170,7 +175,7 @@ public class GatewayApplication {
                     return;
                 }
             }
-            String body = ctx.body().asString(StandardCharsets.UTF_8);
+            String body = ctx.body().asString(StandardCharsets.UTF_8.name());
             try {
                 SendCommandRequest request = objectMapper.readValue(body, SendCommandRequest.class);
                 EndpointSession session = sessions.get(request.deviceId());

@@ -1,2 +1,15 @@
+/target/
+/**/target/
+/.gradle/
+/**/build/
 /.idea/
-/AiBot.iml
+*.iml
+*.ipr
+*.iws
+/.classpath
+/.project
+/.settings/
+/.vscode/
+*.log
+.DS_Store
+Thumbs.db

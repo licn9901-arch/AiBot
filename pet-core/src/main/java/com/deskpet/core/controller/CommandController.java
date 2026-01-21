@@ -2,6 +2,8 @@ package com.deskpet.core.controller;
 
 import com.deskpet.core.dto.CommandCreateRequest;
 import com.deskpet.core.dto.CommandResponse;
+import com.deskpet.core.error.BusinessException;
+import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Command;
 import com.deskpet.core.service.CommandService;
 import jakarta.validation.Valid;
@@ -34,7 +36,7 @@ public class CommandController {
     @GetMapping("/{reqId}")
     public CommandResponse getCommand(@PathVariable String reqId) {
         Command command = commandService.findCommand(reqId)
-                .orElseThrow(() -> new IllegalArgumentException("Command not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMAND_NOT_FOUND));
         return CommandResponse.of(command);
     }
 }

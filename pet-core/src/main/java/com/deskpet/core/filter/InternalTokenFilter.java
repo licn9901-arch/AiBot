@@ -11,6 +11,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+import com.deskpet.core.error.ErrorCode;
+
 @Component
 public class InternalTokenFilter extends OncePerRequestFilter {
     private final String internalToken;
@@ -39,8 +41,10 @@ public class InternalTokenFilter extends OncePerRequestFilter {
         String token = request.getHeader("X-Internal-Token");
         if (!internalToken.equals(token)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-            response.getWriter().write("INVALID_INTERNAL_TOKEN");
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            String body = "{\"code\":\"" + ErrorCode.INTERNAL_TOKEN_INVALID.code()
+                    + "\",\"message\":\"" + ErrorCode.INTERNAL_TOKEN_INVALID.defaultMessage() + "\"}";
+            response.getWriter().write(body);
             return;
         }
         filterChain.doFilter(request, response);

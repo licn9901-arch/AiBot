@@ -2,6 +2,8 @@ package com.deskpet.core.controller;
 
 import com.deskpet.core.dto.DeviceRegistrationRequest;
 import com.deskpet.core.dto.DeviceResponse;
+import com.deskpet.core.error.BusinessException;
+import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.model.DeviceSession;
 import com.deskpet.core.model.TelemetryLatest;
@@ -39,7 +41,7 @@ public class DeviceController {
     @GetMapping("/{deviceId}")
     public DeviceResponse getDevice(@PathVariable String deviceId) {
         Device device = deviceService.find(deviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Device not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         DeviceSession session = deviceService.findSession(deviceId).orElse(null);
         TelemetryLatest telemetry = deviceService.findTelemetry(deviceId).orElse(null);
         return DeviceResponse.of(device, session, telemetry);

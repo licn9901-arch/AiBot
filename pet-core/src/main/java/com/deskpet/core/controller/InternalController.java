@@ -38,7 +38,7 @@ public class InternalController {
         if (device == null) {
             return ResponseEntity.status(404).body("DEVICE_NOT_FOUND");
         }
-        if (!device.secret().equals(secret)) {
+        if (!deviceService.verifySecret(device, secret)) {
             return ResponseEntity.status(401).body("INVALID_SECRET");
         }
         return ResponseEntity.ok("OK");

@@ -15,15 +15,14 @@ import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class MqttServerVerticle extends AbstractVerticle {
-    private static final Logger log = LoggerFactory.getLogger(MqttServerVerticle.class);
 
     private final Map<String, EndpointSession> sessions = new ConcurrentHashMap<>();
     private GatewayConfig config;

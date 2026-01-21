@@ -2,13 +2,12 @@ package com.deskpet.gateway;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Locale;
 
+@Slf4j
 public class GatewayApplication {
-    private static final Logger log = LoggerFactory.getLogger(GatewayApplication.class);
 
     static final String ROUTE_MAP_NAME = "gateway.device.routing";
     static final String COMMAND_ADDRESS_PREFIX = "gateway.command.";

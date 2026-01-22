@@ -7,6 +7,7 @@ import com.deskpet.core.model.Device;
 import com.deskpet.core.service.CommandService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.TelemetryService;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/internal")
+@Hidden
 public class InternalController {
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;

@@ -20,8 +20,7 @@ public class GatewayApplication {
 
     private static void publishVerticle(Vertx vertx, String verticleName) {
         int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
-        boolean reusePort = isReusePortSupported();
-        int instances = reusePort ? cores * 2 : 1;
+        int instances = cores * 2;
         DeploymentOptions options = new DeploymentOptions()
                 .setInstances(instances)
                 .setHa(true);
@@ -30,10 +29,5 @@ public class GatewayApplication {
                 log.error("Verticle deploy failed: {}", verticleName, ar.cause());
             }
         });
-    }
-
-    static boolean isReusePortSupported() {
-        String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        return !osName.contains("win");
     }
 }

@@ -45,7 +45,7 @@ public class InternalHttpVerticle extends AbstractVerticle {
             router.post("/internal/command/send").handler(this::handleSendCommand);
 
             HttpServerOptions options = new HttpServerOptions();
-            options.setReusePort(GatewayApplication.isReusePortSupported());
+            options.setReusePort(true);
             vertx.createHttpServer(options)
                     .requestHandler(router)
                     .listen(config.internalPort(), res -> {

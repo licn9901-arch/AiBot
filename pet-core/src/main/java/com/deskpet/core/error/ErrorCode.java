@@ -7,6 +7,7 @@ public enum ErrorCode {
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "A0401", "Validation failed"),
     DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "A0404", "Device not found"),
     COMMAND_NOT_FOUND(HttpStatus.NOT_FOUND, "A0405", "Command not found"),
+    COMMAND_NOT_RETRYABLE(HttpStatus.BAD_REQUEST, "A0406", "Command is not retryable"),
     DEVICE_ALREADY_EXISTS(HttpStatus.CONFLICT, "A0409", "Device already exists"),
     GATEWAY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "C0001", "Gateway unavailable"),
     INTERNAL_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "A0301", "Invalid internal token"),

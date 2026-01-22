@@ -68,7 +68,7 @@ public class MqttServerVerticle extends AbstractVerticle {
     private void startMqttServer(Promise<Void> startPromise) {
         MqttServerOptions options = new MqttServerOptions()
                 .setPort(config.mqttPort());
-        options.setReusePort(GatewayApplication.isReusePortSupported());
+        options.setReusePort(true);
         MqttServer.create(vertx, options)
                 .endpointHandler(this::handleEndpoint)
                 .listen(ar -> {

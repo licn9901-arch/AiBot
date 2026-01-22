@@ -40,35 +40,21 @@ public class CommandService {
         String reqId = UUID.randomUUID().toString();
         Command command = new Command(reqId, deviceId, type, payload, CommandStatus.PENDING, null, null, Instant.now(), Instant.now());
         commandRepository.save(command);
+        return dispatchCommand(command);
+    }
 
-        String payloadJson;
-        try {
-            CommandEnvelope envelope = CommandEnvelope.of(type, reqId, payload);
-            payloadJson = objectMapper.writeValueAsString(envelope);
-        } catch (Exception e) {
-            command = command.withStatus(CommandStatus.FAILED, "SERIALIZE_ERROR", "Failed to serialize command payload");
-            return commandRepository.save(command);
+    public Command retryCommand(String deviceId, String reqId) {
+        Command command = commandRepository.findById(reqId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMAND_NOT_FOUND));
+        if (!command.deviceId().equals(deviceId)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Command does not belong to device",
+                    Map.of("deviceId", deviceId, "reqId", reqId));
         }
-        GatewaySendCommandResponse response;
-        try {
-            response = gatewayClient.sendCommand(
-                    new GatewaySendCommandRequest(deviceId, "pet/" + deviceId + "/cmd", 1, payloadJson));
-        } catch (RestClientException ex) {
-            command = command.withStatus(CommandStatus.FAILED, "GATEWAY_UNAVAILABLE", "Gateway unavailable");
-            commandRepository.save(command);
-            throw new BusinessException(
-                    ErrorCode.GATEWAY_UNAVAILABLE,
-                    "Gateway unavailable",
-                    Map.of("reqId", reqId)
-            );
+        if (command.status() != CommandStatus.TIMEOUT && command.status() != CommandStatus.FAILED) {
+            throw new BusinessException(ErrorCode.COMMAND_NOT_RETRYABLE, "Command is not retryable",
+                    Map.of("status", command.status().name(), "reqId", reqId));
         }
-        if (response != null && response.ok()) {
-            command = command.withStatus(CommandStatus.SENT, null, null);
-        } else {
-            String reason = response == null ? "NO_RESPONSE" : response.reason();
-            command = command.withStatus(CommandStatus.FAILED, "OFFLINE", reason);
-        }
-        return commandRepository.save(command);
+        return dispatchCommand(command);
     }
 
     public Optional<Command> findCommand(String reqId) {
@@ -91,5 +77,37 @@ public class CommandService {
             Command updated = command.withStatus(CommandStatus.TIMEOUT, "TIMEOUT", "No ack within timeout");
             commandRepository.save(updated);
         }
+    }
+
+    private Command dispatchCommand(Command command) {
+        String payloadJson;
+        try {
+            CommandEnvelope envelope = CommandEnvelope.of(command.type(), command.reqId(), command.payload());
+            payloadJson = objectMapper.writeValueAsString(envelope);
+        } catch (Exception e) {
+            Command failed = command.withStatus(CommandStatus.FAILED, "SERIALIZE_ERROR", "Failed to serialize command payload");
+            return commandRepository.save(failed);
+        }
+        GatewaySendCommandResponse response;
+        try {
+            response = gatewayClient.sendCommand(
+                    new GatewaySendCommandRequest(command.deviceId(), "pet/" + command.deviceId() + "/cmd", 1, payloadJson));
+        } catch (RestClientException ex) {
+            Command failed = command.withStatus(CommandStatus.FAILED, "GATEWAY_UNAVAILABLE", "Gateway unavailable");
+            commandRepository.save(failed);
+            throw new BusinessException(
+                    ErrorCode.GATEWAY_UNAVAILABLE,
+                    "Gateway unavailable",
+                    Map.of("reqId", command.reqId())
+            );
+        }
+        Command updated;
+        if (response != null && response.ok()) {
+            updated = command.withStatus(CommandStatus.SENT, null, null);
+        } else {
+            String reason = response == null ? "NO_RESPONSE" : response.reason();
+            updated = command.withStatus(CommandStatus.FAILED, "OFFLINE", reason);
+        }
+        return commandRepository.save(updated);
     }
 }

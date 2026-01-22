@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/deskpet}
-    username: ${DB_USER:deskpet}
-    password: ${DB_PASSWORD:deskpet}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres?currentSchema=deskpet&stringtype=unspecified}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:123456}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,6 +16,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: 0
 
 command:
   timeoutSec: 10

@@ -8,6 +8,8 @@ import com.deskpet.core.model.Device;
 import com.deskpet.core.model.DeviceSession;
 import com.deskpet.core.model.TelemetryLatest;
 import com.deskpet.core.service.DeviceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/devices")
+@Tag(name = "设备管理", description = "设备注册与查询")
 public class DeviceController {
     private final DeviceService deviceService;
 
@@ -30,6 +33,7 @@ public class DeviceController {
     }
 
     @GetMapping
+    @Operation(summary = "设备列表", description = "返回所有已注册设备与在线/遥测信息")
     public List<DeviceResponse> listDevices() {
         return deviceService.list().stream()
                 .map(device -> DeviceResponse.of(device,
@@ -39,6 +43,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{deviceId}")
+    @Operation(summary = "设备详情", description = "按 deviceId 查询设备与在线/遥测信息")
     public DeviceResponse getDevice(@PathVariable String deviceId) {
         Device device = deviceService.find(deviceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
@@ -49,6 +54,7 @@ public class DeviceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "设备注册", description = "注册设备基础信息与密钥")
     public DeviceResponse register(@Valid @RequestBody DeviceRegistrationRequest request) {
         Device device = deviceService.register(request.deviceId(), request.secret(), request.model(), request.remark());
         return DeviceResponse.of(device, null, null);

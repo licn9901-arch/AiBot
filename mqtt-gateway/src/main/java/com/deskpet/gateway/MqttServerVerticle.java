@@ -24,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class MqttServerVerticle extends AbstractVerticle {
 
+    private static final String HEADER_INTERNAL_TOKEN = "X-Internal-Token";
+    private static final String UNKNOWN_IP = "unknown";
+
     private final Map<String, EndpointSession> sessions = new ConcurrentHashMap<>();
     private GatewayConfig config;
     private WebClient webClient;
@@ -32,28 +35,34 @@ public class MqttServerVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        this.config = GatewayConfig.fromEnv();
-        this.webClient = WebClient.create(vertx);
-        this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        this.commandAddress = GatewayApplication.COMMAND_ADDRESS_PREFIX + deploymentID();
-
-        vertx.eventBus().consumer(commandAddress, message -> {
-            JsonObject body = (JsonObject) message.body();
-            String deviceId = body.getString("deviceId");
-            EndpointSession session = sessions.get(deviceId);
-            if (session == null) {
-                message.reply(new JsonObject().put("ok", false).put("reason", "OFFLINE"));
+        GatewayConfig.load(vertx).onComplete(ar -> {
+            if (ar.failed()) {
+                startPromise.fail(ar.cause());
                 return;
             }
-            String topic = body.getString("topic");
-            String payload = body.getString("payload", "");
-            int qosValue = body.getInteger("qos", MqttQoS.AT_LEAST_ONCE.value());
-            MqttQoS qos = MqttQoS.valueOf(qosValue);
-            session.endpoint().publish(topic, Buffer.buffer(payload), qos, false, false);
-            message.reply(new JsonObject().put("ok", true));
-        });
+            this.config = ar.result();
+            this.webClient = WebClient.create(vertx);
+            this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+            this.commandAddress = GatewayApplication.COMMAND_ADDRESS_PREFIX + deploymentID();
 
-        startMqttServer(startPromise);
+            vertx.eventBus().consumer(commandAddress, message -> {
+                JsonObject body = (JsonObject) message.body();
+                String deviceId = body.getString("deviceId");
+                EndpointSession session = sessions.get(deviceId);
+                if (session == null) {
+                    message.reply(new JsonObject().put("ok", false).put("reason", "OFFLINE"));
+                    return;
+                }
+                String topic = body.getString("topic");
+                String payload = body.getString("payload", "");
+                int qosValue = body.getInteger("qos", MqttQoS.AT_LEAST_ONCE.value());
+                MqttQoS qos = MqttQoS.valueOf(qosValue);
+                session.endpoint().publish(topic, Buffer.buffer(payload), qos, false, false);
+                message.reply(new JsonObject().put("ok", true));
+            });
+
+            startMqttServer(startPromise);
+        });
     }
 
     private void startMqttServer(Promise<Void> startPromise) {
@@ -84,7 +93,7 @@ public class MqttServerVerticle extends AbstractVerticle {
         String authUrl = config.coreInternalBaseUrl() + "/internal/auth";
         var authRequest = webClient.getAbs(authUrl);
         if (!config.internalToken().isBlank()) {
-            authRequest.putHeader("X-Internal-Token", config.internalToken());
+            authRequest.putHeader(HEADER_INTERNAL_TOKEN, config.internalToken());
         }
         authRequest
                 .addQueryParam("deviceId", deviceId)
@@ -96,7 +105,7 @@ public class MqttServerVerticle extends AbstractVerticle {
                     }
                     endpoint.accept(false);
                     SocketAddress remoteAddress = endpoint.remoteAddress();
-                    String ip = remoteAddress == null ? "unknown" : remoteAddress.host();
+                    String ip = remoteAddress == null ? UNKNOWN_IP : remoteAddress.host();
                     sessions.put(deviceId, new EndpointSession(deviceId, endpoint, Instant.now(), ip));
                     markRoute(deviceId);
                     notifyPresence(deviceId, ip, true);
@@ -116,14 +125,14 @@ public class MqttServerVerticle extends AbstractVerticle {
 
         endpoint.disconnectHandler(v -> {
             EndpointSession session = sessions.remove(deviceId);
-            String ip = session == null ? "unknown" : session.clientIp();
+            String ip = session == null ? UNKNOWN_IP : session.clientIp();
             clearRoute(deviceId);
             notifyPresence(deviceId, ip, false);
         });
 
         endpoint.closeHandler(v -> {
             EndpointSession session = sessions.remove(deviceId);
-            String ip = session == null ? "unknown" : session.clientIp();
+            String ip = session == null ? UNKNOWN_IP : session.clientIp();
             clearRoute(deviceId);
             notifyPresence(deviceId, ip, false);
         });
@@ -139,7 +148,7 @@ public class MqttServerVerticle extends AbstractVerticle {
         Buffer payload = message.payload();
         var postRequest = webClient.postAbs(url);
         if (!config.internalToken().isBlank()) {
-            postRequest.putHeader("X-Internal-Token", config.internalToken());
+            postRequest.putHeader(HEADER_INTERNAL_TOKEN, config.internalToken());
         }
         postRequest
                 .sendBuffer(payload, ar -> {
@@ -167,7 +176,7 @@ public class MqttServerVerticle extends AbstractVerticle {
             String body = objectMapper.writeValueAsString(request);
             var presenceRequest = webClient.postAbs(url);
             if (!config.internalToken().isBlank()) {
-                presenceRequest.putHeader("X-Internal-Token", config.internalToken());
+                presenceRequest.putHeader(HEADER_INTERNAL_TOKEN, config.internalToken());
             }
             presenceRequest
                     .putHeader("Content-Type", "application/json")

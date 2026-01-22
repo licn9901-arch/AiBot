@@ -36,7 +36,7 @@ public class GatewayClient {
         } catch (HttpStatusCodeException ex) {
             if (ex.getStatusCode() == HttpStatus.CONFLICT) {
                 String body = ex.getResponseBodyAsString();
-                if (body != null && !body.isBlank()) {
+                if (!body.isBlank()) {
                     try {
                         return objectMapper.readValue(body, GatewaySendCommandResponse.class);
                     } catch (Exception ignore) {

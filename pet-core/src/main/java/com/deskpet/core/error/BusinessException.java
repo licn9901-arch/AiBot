@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;
-    private final Map<String, Object> details;
+    private final transient Map<String, Object> details;
 
     public BusinessException(ErrorCode errorCode) {
         super(errorCode.defaultMessage());

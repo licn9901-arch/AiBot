@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Converter
@@ -30,7 +31,7 @@ public class JsonMapConverter implements AttributeConverter<Map<String, Object>,
     @Override
     public Map<String, Object> convertToEntityAttribute(String dbData) {
         if (dbData == null || dbData.isBlank()) {
-            return null;
+            return new HashMap<>();
         }
         try {
             return MAPPER.readValue(dbData, TYPE_REF);

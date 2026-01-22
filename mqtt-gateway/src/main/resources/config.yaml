@@ -1,0 +1,9 @@
+mqtt:
+  port: 1883
+internal:
+  port: 8081
+  token: ""
+core:
+  internalBaseUrl: "http://localhost:8080"
+gateway:
+  instanceId: "gateway-1"

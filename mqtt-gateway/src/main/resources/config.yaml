@@ -7,3 +7,17 @@ core:
   internalBaseUrl: "http://localhost:8080"
 gateway:
   instanceId: "gateway-1"
+auth:
+  timeoutMs: 2000
+  maxRetries: 1
+  retryDelayMs: 200
+  failOpen: false
+callback:
+  timeoutMs: 2000
+  maxRetries: 1
+  retryDelayMs: 200
+metrics:
+  enabled: false
+  path: "/metrics"
+stats:
+  logIntervalSec: 60

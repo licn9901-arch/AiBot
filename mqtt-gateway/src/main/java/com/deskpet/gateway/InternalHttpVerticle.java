@@ -1,5 +1,6 @@
 package com.deskpet.gateway;
 
+import com.deskpet.GatewayApplication;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -29,6 +30,7 @@ public class InternalHttpVerticle extends AbstractVerticle {
 
     private GatewayConfig config;
     private ObjectMapper objectMapper;
+    private GatewayMetrics metrics;
 
     @Override
     public void start(Promise<Void> startPromise) {
@@ -39,10 +41,14 @@ public class InternalHttpVerticle extends AbstractVerticle {
             }
             this.config = ar.result();
             this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+            this.metrics = GatewayMetrics.getInstance();
 
             Router router = Router.router(vertx);
             router.route().handler(BodyHandler.create());
             router.post("/internal/command/send").handler(this::handleSendCommand);
+            if (config.metricsEnabled()) {
+                router.get(config.metricsPath()).handler(this::handleMetrics);
+            }
 
             HttpServerOptions options = new HttpServerOptions();
             options.setReusePort(true);
@@ -67,14 +73,17 @@ public class InternalHttpVerticle extends AbstractVerticle {
         if (request == null) {
             return;
         }
+        metrics.onCommandSend();
         if (request.payload() == null || request.payload().isBlank()) {
             sendJson(ctx, 400, false, "EMPTY_PAYLOAD");
+            metrics.onCommandSendFail();
             return;
         }
 
         String address = resolveRouteAddress(request.deviceId());
         if (address == null) {
             sendJson(ctx, 409, false, "OFFLINE");
+            metrics.onCommandSendFail();
             return;
         }
 
@@ -130,6 +139,7 @@ public class InternalHttpVerticle extends AbstractVerticle {
         if (ar.failed()) {
             log.warn("Command dispatch failed: {}", ar.cause().getMessage());
             sendJson(ctx, 500, false, "DISPATCH_FAILED");
+            metrics.onCommandSendFail();
             return;
         }
         JsonObject reply = (JsonObject) ar.result().body();
@@ -137,8 +147,10 @@ public class InternalHttpVerticle extends AbstractVerticle {
         String reason = reply.getString(FIELD_REASON, "");
         if (!ok) {
             sendJson(ctx, 409, false, reason);
+            metrics.onCommandSendFail();
             return;
         }
+        metrics.onCommandSendOk();
         sendJson(ctx, 200, true, "SENT");
     }
 
@@ -147,5 +159,12 @@ public class InternalHttpVerticle extends AbstractVerticle {
                 .setStatusCode(statusCode)
                 .putHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON)
                 .end(new JsonObject().put("ok", ok).put(FIELD_REASON, reason).encode());
+    }
+
+    private void handleMetrics(RoutingContext ctx) {
+        ctx.response()
+                .setStatusCode(200)
+                .putHeader(HEADER_CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")
+                .end(metrics.toPrometheus());
     }
 }

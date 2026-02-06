@@ -59,4 +59,11 @@ public class DeviceController {
         Device device = deviceService.register(request.deviceId(), request.secret(), request.model(), request.remark());
         return DeviceResponse.of(device, null, null);
     }
+
+    @GetMapping("/{deviceId}/telemetry/history")
+    @Operation(summary = "遥测历史", description = "查询最近 N 小时的遥测数据")
+    public List<com.deskpet.core.model.TelemetryHistory> getTelemetryHistory(@PathVariable String deviceId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "24") int hours) {
+        return deviceService.findTelemetryHistory(deviceId, java.time.Duration.ofHours(hours));
+    }
 }

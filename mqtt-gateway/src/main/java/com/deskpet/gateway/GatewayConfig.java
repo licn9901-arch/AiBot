@@ -16,7 +16,17 @@ public record GatewayConfig(
         int internalPort,
         String coreInternalBaseUrl,
         String instanceId,
-        String internalToken
+        String internalToken,
+        int authTimeoutMs,
+        int authMaxRetries,
+        int authRetryDelayMs,
+        boolean authFailOpen,
+        int callbackTimeoutMs,
+        int callbackMaxRetries,
+        int callbackRetryDelayMs,
+        boolean metricsEnabled,
+        String metricsPath,
+        int statsLogIntervalSec
 ) {
     public static Future<GatewayConfig> load(Vertx vertx) {
         ConfigStoreOptions store = new ConfigStoreOptions()
@@ -45,7 +55,24 @@ public record GatewayConfig(
         String coreInternalBaseUrl = core.getString("internalBaseUrl", "http://localhost:8080");
         JsonObject gateway = config.getJsonObject("gateway", new JsonObject());
         String instanceId = gateway.getString("instanceId", "gateway-1");
-        return new GatewayConfig(mqttPort, internalPort, coreInternalBaseUrl, instanceId, internalToken);
+        JsonObject auth = config.getJsonObject("auth", new JsonObject());
+        int authTimeoutMs = auth.getInteger("timeoutMs", 2000);
+        int authMaxRetries = auth.getInteger("maxRetries", 1);
+        int authRetryDelayMs = auth.getInteger("retryDelayMs", 200);
+        boolean authFailOpen = auth.getBoolean("failOpen", false);
+        JsonObject callback = config.getJsonObject("callback", new JsonObject());
+        int callbackTimeoutMs = callback.getInteger("timeoutMs", 2000);
+        int callbackMaxRetries = callback.getInteger("maxRetries", 1);
+        int callbackRetryDelayMs = callback.getInteger("retryDelayMs", 200);
+        JsonObject metrics = config.getJsonObject("metrics", new JsonObject());
+        boolean metricsEnabled = metrics.getBoolean("enabled", false);
+        String metricsPath = metrics.getString("path", "/metrics");
+        JsonObject stats = config.getJsonObject("stats", new JsonObject());
+        int statsLogIntervalSec = stats.getInteger("logIntervalSec", 60);
+        return new GatewayConfig(mqttPort, internalPort, coreInternalBaseUrl, instanceId, internalToken,
+                authTimeoutMs, authMaxRetries, authRetryDelayMs, authFailOpen,
+                callbackTimeoutMs, callbackMaxRetries, callbackRetryDelayMs,
+                metricsEnabled, metricsPath, statsLogIntervalSec);
     }
 
     private static String resolveConfigPath() {

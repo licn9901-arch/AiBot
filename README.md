@@ -66,7 +66,7 @@ curl -X POST http://localhost:8080/api/devices \
 - `gateway.instanceId`：网关实例 ID，默认 `gateway-1`
 - `internal.token`：内部接口 Token，默认空（不校验）
 
-说明：网关通过 JVM System Properties 读取配置，例如 `-Dinternal.token=xxx`。
+说明：网关默认读取 `config.yaml`，可用 `-Dgateway.config=path` 指定配置路径。
 
 ## 核心 API（pet-core）
 
@@ -140,4 +140,9 @@ curl -X POST http://localhost:8080/api/devices \
 
 ## 数据存储
 
-当前版本使用内存存储（ConcurrentHashMap），服务重启后数据会丢失。
+默认使用 PostgreSQL + Flyway 进行持久化（详见 `doc/部署与运维.md`）。
+
+## 运维与测试
+
+- 配置与部署：`doc/部署与运维.md`
+- 测试与模拟：`doc/测试与模拟.md`

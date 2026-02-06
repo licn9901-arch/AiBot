@@ -1,16 +1,16 @@
-package com.deskpet.gateway;
+package com.deskpet;
 
+import com.deskpet.gateway.InternalHttpVerticle;
+import com.deskpet.gateway.MqttServerVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Locale;
-
 @Slf4j
 public class GatewayApplication {
 
-    static final String ROUTE_MAP_NAME = "gateway.device.routing";
-    static final String COMMAND_ADDRESS_PREFIX = "gateway.command.";
+    public static final String ROUTE_MAP_NAME = "gateway.device.routing";
+    public static final String COMMAND_ADDRESS_PREFIX = "gateway.command.";
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();

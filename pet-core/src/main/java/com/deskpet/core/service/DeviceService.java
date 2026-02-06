@@ -9,6 +9,7 @@ import com.deskpet.core.security.SecretHash;
 import com.deskpet.core.security.SecretHasher;
 import com.deskpet.core.repository.DeviceRepository;
 import com.deskpet.core.repository.DeviceSessionRepository;
+import com.deskpet.core.repository.TelemetryHistoryRepository;
 import com.deskpet.core.repository.TelemetryLatestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final DeviceSessionRepository sessionRepository;
     private final TelemetryLatestRepository telemetryLatestRepository;
+    private final TelemetryHistoryRepository telemetryHistoryRepository;
     private final SecretHasher secretHasher;
 
     public Device register(String deviceId, String secret, String model, String remark) {
@@ -62,5 +64,11 @@ public class DeviceService {
     public DeviceSession markOffline(String deviceId, String gatewayInstanceId, String ip) {
         DeviceSession session = new DeviceSession(deviceId, false, gatewayInstanceId, ip, Instant.now());
         return sessionRepository.save(session);
+    }
+
+    public java.util.List<com.deskpet.core.model.TelemetryHistory> findTelemetryHistory(String deviceId,
+            java.time.Duration duration) {
+        return telemetryHistoryRepository.findByDeviceIdAndCreatedAtAfterOrderByCreatedAtAsc(deviceId,
+                Instant.now().minus(duration));
     }
 }

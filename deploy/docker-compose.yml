@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: deskpet-db
+    environment:
+      POSTGRES_USER: deskpet
+      POSTGRES_PASSWORD: deskpet
+      POSTGRES_DB: deskpet
+    ports:
+      - "5432:5432"
+    volumes:
+      - deskpet-db-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: deskpet-redis
+    profiles: ["redis"]
+    ports:
+      - "6379:6379"
+
+volumes:
+  deskpet-db-data:

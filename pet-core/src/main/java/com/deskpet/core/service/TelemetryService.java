@@ -17,7 +17,7 @@ public class TelemetryService {
     private final TelemetryLatestRepository telemetryLatestRepository;
     private final TelemetryHistoryRepository telemetryHistoryRepository;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public TelemetryLatest updateLatest(String deviceId, Map<String, Object> telemetry) {
         Instant now = Instant.now();
         TelemetryLatest latest = telemetryLatestRepository.save(new TelemetryLatest(deviceId, telemetry, now));

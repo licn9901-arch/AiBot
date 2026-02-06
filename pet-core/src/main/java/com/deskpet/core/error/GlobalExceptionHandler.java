@@ -1,9 +1,11 @@
 package com.deskpet.core.error;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -25,6 +27,43 @@ public class GlobalExceptionHandler {
         ErrorResponse response = ErrorResponse.of(errorCode, ex.getMessage(), ex.getDetails());
         return ResponseEntity.status(errorCode.status()).body(response);
     }
+
+    // ==================== Sa-Token 异常处理 ====================
+
+    @ExceptionHandler(NotLoginException.class)
+    public ResponseEntity<ErrorResponse> handleNotLogin(NotLoginException ex) {
+        String message = switch (ex.getType()) {
+            case NotLoginException.NOT_TOKEN -> "未提供 Token";
+            case NotLoginException.INVALID_TOKEN -> "Token 无效";
+            case NotLoginException.TOKEN_TIMEOUT -> "Token 已过期";
+            case NotLoginException.BE_REPLACED -> "已被顶下线";
+            case NotLoginException.KICK_OUT -> "已被踢下线";
+            default -> "未登录";
+        };
+        ErrorCode errorCode = switch (ex.getType()) {
+            case NotLoginException.TOKEN_TIMEOUT -> ErrorCode.TOKEN_EXPIRED;
+            case NotLoginException.INVALID_TOKEN -> ErrorCode.INVALID_TOKEN;
+            default -> ErrorCode.UNAUTHORIZED;
+        };
+        ErrorResponse response = ErrorResponse.of(errorCode, message, null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    public ResponseEntity<ErrorResponse> handleNotPermission(NotPermissionException ex) {
+        String message = "无权限: " + ex.getPermission();
+        ErrorResponse response = ErrorResponse.of(ErrorCode.NO_PERMISSION, message, null);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    public ResponseEntity<ErrorResponse> handleNotRole(NotRoleException ex) {
+        String message = "无角色: " + ex.getRole();
+        ErrorResponse response = ErrorResponse.of(ErrorCode.NO_ROLE, message, null);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    // ==================== 参数校验异常 ====================
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {

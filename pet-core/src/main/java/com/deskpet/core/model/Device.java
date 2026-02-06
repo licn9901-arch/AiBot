@@ -35,6 +35,9 @@ public class Device {
     @Column(name = "model")
     private String model;
 
+    @Column(name = "product_key", length = 50)
+    private String productKey;
+
     @Column(name = "remark")
     private String remark;
 

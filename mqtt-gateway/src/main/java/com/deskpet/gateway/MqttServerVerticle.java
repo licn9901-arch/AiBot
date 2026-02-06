@@ -150,12 +150,28 @@ public class MqttServerVerticle extends AbstractVerticle {
             return;
         }
         boolean telemetry = topic.endsWith("/telemetry");
-        String targetPath = telemetry ? "/internal/telemetry/" : "/internal/ack/";
+        boolean event = topic.endsWith("/event");
+        String targetPath;
+        if (telemetry) {
+            targetPath = "/internal/telemetry/";
+        } else if (event) {
+            targetPath = "/internal/event/";
+        } else {
+            targetPath = "/internal/ack/";
+        }
         String url = config.coreInternalBaseUrl() + targetPath + deviceId;
         Buffer payload = message.payload();
-        long count = telemetry ? metrics.onTelemetry() : metrics.onAck();
+        long count;
+        if (telemetry) {
+            count = metrics.onTelemetry();
+        } else if (event) {
+            count = metrics.onEvent();
+        } else {
+            count = metrics.onAck();
+        }
         if (log.isDebugEnabled()) {
-            log.debug("Upstream {} received: deviceId={} count={}", telemetry ? "telemetry" : "ack", deviceId, count);
+            String type = telemetry ? "telemetry" : (event ? "event" : "ack");
+            log.debug("Upstream {} received: deviceId={} count={}", type, deviceId, count);
         }
         Supplier<HttpRequest<Buffer>> requestSupplier = () -> {
             HttpRequest<Buffer> postRequest = webClient.postAbs(url);
@@ -185,7 +201,9 @@ public class MqttServerVerticle extends AbstractVerticle {
     }
 
     private boolean isValidPublish(String deviceId, String topic) {
-        return topic.equals("pet/" + deviceId + "/telemetry") || topic.equals("pet/" + deviceId + "/cmd/ack");
+        return topic.equals("pet/" + deviceId + "/telemetry")
+            || topic.equals("pet/" + deviceId + "/cmd/ack")
+            || topic.equals("pet/" + deviceId + "/event");
     }
 
     private void notifyPresence(String deviceId, String ip, boolean online) {

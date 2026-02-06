@@ -10,6 +10,8 @@ public record DeviceRegistrationRequest(
         @NotBlank String secret,
         @Schema(description = "设备型号", example = "deskpet-v0.1")
         String model,
+        @Schema(description = "产品标识", example = "deskpet-v1")
+        String productKey,
         @Schema(description = "备注", example = "桌面测试设备")
         String remark
 ) {

@@ -1,10 +1,13 @@
 package com.deskpet.core.controller;
 
 import com.deskpet.core.dto.AckRequest;
+import com.deskpet.core.dto.DeviceEventRequest;
+import com.deskpet.core.dto.DeviceEventResponse;
 import com.deskpet.core.dto.GatewayPresenceRequest;
 import com.deskpet.core.dto.TelemetryRequest;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.service.CommandService;
+import com.deskpet.core.service.DeviceEventService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.TelemetryService;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -24,13 +27,16 @@ public class InternalController {
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
     private final CommandService commandService;
+    private final DeviceEventService deviceEventService;
 
     public InternalController(DeviceService deviceService,
                               TelemetryService telemetryService,
-                              CommandService commandService) {
+                              CommandService commandService,
+                              DeviceEventService deviceEventService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.commandService = commandService;
+        this.deviceEventService = deviceEventService;
     }
 
     @GetMapping("/auth")
@@ -70,5 +76,12 @@ public class InternalController {
     public ResponseEntity<Void> deviceOffline(@RequestBody GatewayPresenceRequest request) {
         deviceService.markOffline(request.deviceId(), request.gatewayInstanceId(), request.ip());
         return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/event/{deviceId}")
+    public ResponseEntity<DeviceEventResponse> event(@PathVariable String deviceId,
+                                                     @RequestBody DeviceEventRequest request) {
+        DeviceEventResponse response = deviceEventService.recordEvent(deviceId, request);
+        return ResponseEntity.accepted().body(response);
     }
 }

@@ -17,6 +17,41 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
+  # Redis 配置（用于 Sa-Token 分布式会话）
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:localhost8080}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# Sa-Token 配置
+sa-token:
+  # Token 名称（同时也是 Cookie 名称、Header 名称）
+  token-name: Authorization
+  # Token 有效期（单位：秒），默认1天
+  timeout: 86400
+  # Token 临时有效期（指定时间内无操作就视为过期），-1 代表不限制
+  active-timeout: -1
+  # 是否允许同一账号并发登录
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个 Token
+  is-share: false
+  # Token 风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+  # 是否从 Header 读取 Token
+  is-read-header: true
+  # 是否从 Cookie 读取 Token
+  is-read-cookie: false
+  # Token 前缀（如 Bearer）
+  token-prefix: Bearer
 
 command:
   timeoutSec: 10

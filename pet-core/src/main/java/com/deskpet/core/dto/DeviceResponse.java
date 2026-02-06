@@ -13,6 +13,8 @@ public record DeviceResponse(
         String deviceId,
         @Schema(description = "设备型号", example = "deskpet-v0.1")
         String model,
+        @Schema(description = "产品标识", example = "deskpet-v1")
+        String productKey,
         @Schema(description = "备注", example = "桌面测试设备")
         String remark,
         @Schema(description = "注册时间", example = "2026-01-21T10:30:00Z")
@@ -28,6 +30,6 @@ public record DeviceResponse(
         boolean online = session != null && session.online();
         Instant lastSeen = session == null ? null : session.lastSeen();
         Map<String, Object> latest = telemetry == null ? null : telemetry.telemetry();
-        return new DeviceResponse(device.deviceId(), device.model(), device.remark(), device.createdAt(), online, lastSeen, latest);
+        return new DeviceResponse(device.deviceId(), device.model(), device.productKey(), device.remark(), device.createdAt(), online, lastSeen, latest);
     }
 }

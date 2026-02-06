@@ -1,6 +1,8 @@
 ﻿<script setup lang="ts">
 const navItems = [
   { label: '总览', path: '/' },
+  { label: '授权码', path: '/licenses' },
+  { label: '产品', path: '/products' },
   { label: '设备', path: '/devices' },
   { label: '指令', path: '/commands' },
   { label: '遥测', path: '/telemetry' },

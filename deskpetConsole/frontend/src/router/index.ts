@@ -2,6 +2,9 @@
 
 const routes = [
   { path: '/', name: 'dashboard', component: () => import('../pages/Dashboard.vue') },
+  { path: '/licenses', name: 'licenses', component: () => import('../pages/Licenses.vue') },
+  { path: '/products', name: 'products', component: () => import('../pages/Products.vue') },
+  { path: '/products/:productKey', name: 'thing-model', component: () => import('../pages/ThingModel.vue') },
   { path: '/devices', name: 'devices', component: () => import('../pages/Devices.vue') },
   { path: '/devices/:id', name: 'device-detail', component: () => import('../pages/DeviceDetail.vue') },
   { path: '/commands', name: 'commands', component: () => import('../pages/Commands.vue') },

@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -50,14 +51,17 @@ public class MqttServerVerticle extends AbstractVerticle {
             this.config = ar.result();
             this.webClient = WebClient.create(vertx);
             this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-            this.commandAddress = GatewayApplication.COMMAND_ADDRESS_PREFIX + deploymentID();
+            this.commandAddress = GatewayApplication.COMMAND_ADDRESS_PREFIX + UUID.randomUUID();
+            log.info("[MQTT] Verticle 启动: commandAddress={}", commandAddress);
             this.metrics = GatewayMetrics.getInstance();
 
             vertx.eventBus().consumer(commandAddress, message -> {
                 JsonObject body = (JsonObject) message.body();
                 String deviceId = body.getString("deviceId");
+                log.info("[MQTT] EventBus 收到指令: deviceId={}, topic={}", deviceId, body.getString("topic"));
                 EndpointSession session = sessions.get(deviceId);
                 if (session == null) {
+                    log.warn("[MQTT] 设备不在会话表中: deviceId={}, sessions={}", deviceId, sessions.keySet());
                     message.reply(new JsonObject().put("ok", false).put("reason", "OFFLINE"));
                     return;
                 }
@@ -65,6 +69,7 @@ public class MqttServerVerticle extends AbstractVerticle {
                 String payload = body.getString("payload", "");
                 int qosValue = body.getInteger("qos", MqttQoS.AT_LEAST_ONCE.value());
                 MqttQoS qos = MqttQoS.valueOf(qosValue);
+                log.info("[MQTT] 发布到设备: deviceId={}, topic={}, qos={}, payloadLen={}", deviceId, topic, qos, payload.length());
                 session.endpoint().publish(topic, Buffer.buffer(payload), qos, false, false);
                 message.reply(new JsonObject().put("ok", true));
             });
@@ -94,7 +99,9 @@ public class MqttServerVerticle extends AbstractVerticle {
         String deviceId = endpoint.clientIdentifier();
         String username = endpoint.auth() != null ? endpoint.auth().getUsername() : null;
         String password = endpoint.auth() != null ? endpoint.auth().getPassword() : null;
+        log.info("[MQTT] 设备连接请求: deviceId={}, username={}", deviceId, username);
         if (username == null || password == null || !deviceId.equals(username)) {
+            log.warn("[MQTT] 认证信息缺失或不匹配: deviceId={}, username={}", deviceId, username);
             endpoint.reject(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
             return;
         }
@@ -131,7 +138,11 @@ public class MqttServerVerticle extends AbstractVerticle {
     private void wireEndpointHandlers(MqttEndpoint endpoint, String deviceId) {
         endpoint.subscribeHandler(subscribe -> {
             var suback = subscribe.topicSubscriptions().stream()
-                    .map(sub -> isValidSubscribe(deviceId, sub.topicName()) ? sub.qualityOfService() : MqttQoS.FAILURE)
+                    .map(sub -> {
+                        boolean valid = isValidSubscribe(deviceId, sub.topicName());
+                        log.info("[MQTT] 订阅请求: deviceId={}, topic={}, valid={}", deviceId, sub.topicName(), valid);
+                        return valid ? sub.qualityOfService() : MqttQoS.FAILURE;
+                    })
                     .toList();
             endpoint.subscribeAcknowledge(subscribe.messageId(), suback);
         });
@@ -235,6 +246,7 @@ public class MqttServerVerticle extends AbstractVerticle {
         LocalMap<String, String> routing = vertx.sharedData().getLocalMap(GatewayApplication.ROUTE_MAP_NAME);
         routing.put(deviceId, commandAddress);
         metrics.setOnlineCount(routing.size());
+        log.info("[MQTT] 路由注册: deviceId={}, address={}, 路由表大小={}", deviceId, commandAddress, routing.size());
     }
 
     private void clearRoute(String deviceId) {
@@ -242,6 +254,9 @@ public class MqttServerVerticle extends AbstractVerticle {
         String owner = routing.get(deviceId);
         if (commandAddress.equals(owner)) {
             routing.remove(deviceId);
+            log.info("[MQTT] 路由移除: deviceId={}, 路由表大小={}", deviceId, routing.size());
+        } else {
+            log.warn("[MQTT] 路由移除跳过(非本 Verticle 拥有): deviceId={}, owner={}, mine={}", deviceId, owner, commandAddress);
         }
         metrics.setOnlineCount(routing.size());
     }
@@ -275,16 +290,16 @@ public class MqttServerVerticle extends AbstractVerticle {
         if (intervalSec <= 0) {
             return;
         }
-        vertx.setPeriodic(intervalSec * 1000L, id -> log.info(
-                "Gateway stats: online={} telemetry={} ack={} cmdSend={} connect={} disconnect={} authFail={} callbackFail={}",
-                metrics.onlineCount(),
-                metrics.telemetryCount(),
-                metrics.ackCount(),
-                metrics.commandSendCount(),
-                metrics.connectCount(),
-                metrics.disconnectCount(),
-                metrics.authFailCount(),
-                metrics.callbackFailCount()));
+        // vertx.setPeriodic(intervalSec * 1000L, id -> log.info(
+        //         "Gateway stats: online={} telemetry={} ack={} cmdSend={} connect={} disconnect={} authFail={} callbackFail={}",
+        //         metrics.onlineCount(),
+        //         metrics.telemetryCount(),
+        //         metrics.ackCount(),
+        //         metrics.commandSendCount(),
+        //         metrics.connectCount(),
+        //         metrics.disconnectCount(),
+        //         metrics.authFailCount(),
+        //         metrics.callbackFailCount()));
     }
 
     private void sendWithRetry(Supplier<HttpRequest<Buffer>> requestSupplier,

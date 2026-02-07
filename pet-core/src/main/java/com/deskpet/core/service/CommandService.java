@@ -11,6 +11,7 @@ import com.deskpet.core.model.Command;
 import com.deskpet.core.model.CommandStatus;
 import com.deskpet.core.repository.CommandRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class CommandService {
     private final CommandRepository commandRepository;
@@ -57,14 +59,18 @@ public class CommandService {
     }
 
     public Command createCommand(String deviceId, String type, Map<String, Object> payload) {
+        log.info("[CMD] 创建指令: deviceId={}, type={}, payload={}", deviceId, type, payload);
         if (deviceService.find(deviceId).isEmpty()) {
+            log.warn("[CMD] 设备不存在: deviceId={}", deviceId);
             throw new BusinessException(ErrorCode.DEVICE_NOT_FOUND);
         }
         String reqId = UUID.randomUUID().toString();
         Command command = new Command(reqId, deviceId, type, payload, CommandStatus.PENDING, null, null, Instant.now(), Instant.now());
         commandRepository.save(command);
+        log.info("[CMD] 指令已保存: reqId={}, status=PENDING", reqId);
         Command result = dispatchCommand(command);
         writeCommandToTimescaleDb(result);
+        log.info("[CMD] 指令最终状态: reqId={}, status={}", reqId, result.status());
         return result;
     }
 
@@ -87,12 +93,14 @@ public class CommandService {
     }
 
     public void handleAck(String reqId, AckRequest ack) {
-        commandRepository.findById(reqId).ifPresent(command -> {
+        log.info("[CMD] 收到设备回执: reqId={}, ok={}, code={}, message={}", reqId, ack.ok(), ack.code(), ack.message());
+        commandRepository.findById(reqId).ifPresentOrElse(command -> {
             CommandStatus next = ack.ok() ? CommandStatus.ACKED : CommandStatus.FAILED;
             Command updated = command.withStatus(next, ack.code(), ack.message());
             commandRepository.save(updated);
             pushCommandStatusUpdate(updated);
-        });
+            log.info("[CMD] 回执处理完成: reqId={}, status={}", reqId, next);
+        }, () -> log.warn("[CMD] 回执对应的指令不存在: reqId={}", reqId));
     }
 
     @Scheduled(fixedDelayString = "${command.timeoutScanMs:2000}")
@@ -111,7 +119,9 @@ public class CommandService {
         try {
             CommandEnvelope envelope = CommandEnvelope.of(command.type(), command.reqId(), command.payload());
             payloadJson = objectMapper.writeValueAsString(envelope);
+            log.info("[CMD] 序列化完成: reqId={}, topic=pet/{}/cmd, payload={}", command.reqId(), command.deviceId(), payloadJson);
         } catch (Exception e) {
+            log.error("[CMD] 序列化失败: reqId={}, error={}", command.reqId(), e.getMessage(), e);
             Command failed = command.withStatus(CommandStatus.FAILED, "SERIALIZE_ERROR", "Failed to serialize command payload");
             Command saved = commandRepository.save(failed);
             pushCommandStatusUpdate(saved);
@@ -119,9 +129,14 @@ public class CommandService {
         }
         GatewaySendCommandResponse response;
         try {
+            log.info("[CMD] 发送到网关: reqId={}, deviceId={}", command.reqId(), command.deviceId());
             response = gatewayClient.sendCommand(
                     new GatewaySendCommandRequest(command.deviceId(), "pet/" + command.deviceId() + "/cmd", 1, payloadJson));
+            log.info("[CMD] 网关响应: reqId={}, ok={}, reason={}", command.reqId(),
+                    response != null ? response.ok() : "null",
+                    response != null ? response.reason() : "null");
         } catch (RestClientException ex) {
+            log.error("[CMD] 网关不可达: reqId={}, error={}", command.reqId(), ex.getMessage(), ex);
             Command failed = command.withStatus(CommandStatus.FAILED, "GATEWAY_UNAVAILABLE", "Gateway unavailable");
             commandRepository.save(failed);
             pushCommandStatusUpdate(failed);
@@ -134,9 +149,11 @@ public class CommandService {
         Command updated;
         if (response != null && response.ok()) {
             updated = command.withStatus(CommandStatus.SENT, null, null);
+            log.info("[CMD] 指令已发送: reqId={}, status=SENT", command.reqId());
         } else {
             String reason = response == null ? "NO_RESPONSE" : response.reason();
             updated = command.withStatus(CommandStatus.FAILED, "OFFLINE", reason);
+            log.warn("[CMD] 指令发送失败: reqId={}, status=FAILED, reason={}", command.reqId(), reason);
         }
         Command saved = commandRepository.save(updated);
         pushCommandStatusUpdate(saved);

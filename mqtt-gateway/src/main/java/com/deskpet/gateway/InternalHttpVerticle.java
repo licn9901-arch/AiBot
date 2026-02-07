@@ -74,7 +74,9 @@ public class InternalHttpVerticle extends AbstractVerticle {
             return;
         }
         metrics.onCommandSend();
+        log.info("[CMD-GW] 收到指令请求: deviceId={}, topic={}, qos={}", request.deviceId(), request.topic(), request.qos());
         if (request.payload() == null || request.payload().isBlank()) {
+            log.warn("[CMD-GW] payload 为空: deviceId={}", request.deviceId());
             sendJson(ctx, 400, false, "EMPTY_PAYLOAD");
             metrics.onCommandSendFail();
             return;
@@ -82,10 +84,14 @@ public class InternalHttpVerticle extends AbstractVerticle {
 
         String address = resolveRouteAddress(request.deviceId());
         if (address == null) {
+            LocalMap<String, String> routing = vertx.sharedData().getLocalMap(GatewayApplication.ROUTE_MAP_NAME);
+            log.warn("[CMD-GW] 设备不在路由表中(OFFLINE): deviceId={}, 路由表大小={}, 路由表内容={}",
+                    request.deviceId(), routing.size(), routing.keySet());
             sendJson(ctx, 409, false, "OFFLINE");
             metrics.onCommandSendFail();
             return;
         }
+        log.info("[CMD-GW] 路由解析成功: deviceId={}, address={}", request.deviceId(), address);
 
         JsonObject command = buildCommand(request);
         DeliveryOptions options = new DeliveryOptions().setSendTimeout(COMMAND_TIMEOUT_MS);

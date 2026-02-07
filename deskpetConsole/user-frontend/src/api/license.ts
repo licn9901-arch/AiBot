@@ -2,9 +2,9 @@ import service from '@/utils/request'
 import type { LicenseCodeResponse, ActivateLicenseRequest } from '@/types/license'
 
 export function activateLicense(data: ActivateLicenseRequest): Promise<LicenseCodeResponse> {
-  return service.post('api/user/licenses/activate', data)
+  return service.post('api/user/me/licenses/activate', data)
 }
 
 export function getMyLicenses(): Promise<LicenseCodeResponse[]> {
-  return service.get('api/user/licenses')
+  return service.get('api/user/me/licenses')
 }

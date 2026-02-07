@@ -32,6 +32,8 @@ public interface LicenseCodeRepository extends JpaRepository<LicenseCode, Long> 
 
     Page<LicenseCode> findByBatchNo(String batchNo, Pageable pageable);
 
+    Page<LicenseCode> findByStatusAndBatchNo(LicenseCode.Status status, String batchNo, Pageable pageable);
+
     @Query("SELECT lc FROM LicenseCode lc WHERE " +
            "(:status IS NULL OR lc.status = :status) AND " +
            "(:batchNo IS NULL OR lc.batchNo = :batchNo)")

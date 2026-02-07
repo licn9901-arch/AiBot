@@ -38,6 +38,9 @@ public class Device {
     @Column(name = "product_key", length = 50)
     private String productKey;
 
+    @Column(name = "product_id", length = 50)
+    private Long productId;
+
     @Column(name = "remark")
     private String remark;
 

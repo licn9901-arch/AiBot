@@ -84,7 +84,8 @@ public class DeviceController {
     @SaCheckPermission("device:register")
     @Operation(summary = "设备注册", description = "注册设备基础信息与密钥（管理员操作）")
     public DeviceResponse register(@Valid @RequestBody DeviceRegistrationRequest request) {
-        Device device = deviceService.register(request.deviceId(), request.secret(), request.model(), request.productKey(), request.remark());
+        long productId = Long.parseLong(request.productId());
+        Device device = deviceService.register(request.deviceId(), request.secret(), request.model(), request.productKey(), request.remark(), productId);
         return DeviceResponse.of(device, null, null);
     }
 

@@ -25,24 +25,24 @@
       </div>
 
       <el-table :data="filteredDevices" style="width: 100%" v-loading="loading">
-        <el-table-column prop="device.deviceId" label="设备ID" width="180" sortable />
-        <el-table-column prop="device.model" label="型号" width="120" />
+        <el-table-column prop="deviceId" label="设备ID" width="180" sortable />
+        <el-table-column prop="model" label="型号" width="120" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.session?.connected ? 'success' : 'info'">
-              {{ row.session?.connected ? '在线' : '离线' }}
+            <el-tag :type="row.online ? 'success' : 'info'">
+              {{ row.online ? '在线' : '离线' }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="最后活跃" width="180">
           <template #default="{ row }">
-            {{ formatTime(row.session?.connected ? row.session?.connectedAt : row.session?.disconnectedAt) }}
+            {{ formatTime(row.lastSeen) }}
           </template>
         </el-table-column>
-        <el-table-column prop="device.remark" label="备注" />
+        <el-table-column prop="remark" label="备注" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="$router.push(`/devices/${row.device.deviceId}`)">详情</el-button>
+            <el-button link type="primary" size="small" @click="$router.push(`/devices/${row.deviceId}`)">详情</el-button>
             <el-button link type="primary" size="small">指令</el-button>
           </template>
         </el-table-column>
@@ -56,7 +56,6 @@ import { ref, computed } from 'vue'
 import { getDevices } from '@/api/device'
 import type { DeviceResponse } from '@/types/device'
 
-
 import { usePolling } from '@/composables/usePolling'
 
 const devices = ref<DeviceResponse[]>([])
@@ -69,12 +68,12 @@ const filteredDevices = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return devices.value.filter(
     (d: DeviceResponse) =>
-      d.device.deviceId.toLowerCase().includes(q) ||
-      d.device.remark?.toLowerCase().includes(q)
+      d.deviceId.toLowerCase().includes(q) ||
+      d.remark?.toLowerCase().includes(q)
   )
 })
 
-function formatTime(ts?: number) {
+function formatTime(ts?: string) {
   if (!ts) return '-'
   return new Date(ts).toLocaleString()
 }

@@ -12,6 +12,8 @@ public record DeviceRegistrationRequest(
         String model,
         @Schema(description = "产品标识", example = "deskpet-v1")
         String productKey,
+        @Schema(description = "产品ID", example = "1")
+        String productId,
         @Schema(description = "备注", example = "桌面测试设备")
         String remark
 ) {

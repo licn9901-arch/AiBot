@@ -88,8 +88,8 @@ public class AdminLicenseController {
     @SaCheckPermission("license:list")
     @Operation(summary = "授权码列表", description = "支持按状态、批次号筛选")
     public Page<LicenseCodeResponse> list(
-            @RequestParam(required = false) LicenseCode.Status status,
-            @RequestParam(required = false) String batchNo,
+            @RequestParam(name = "status", required = false) LicenseCode.Status status,
+            @RequestParam(name = "batchNo", required = false) String batchNo,
             @PageableDefault(size = 20) Pageable pageable) {
         return licenseCodeService.list(new LicenseQueryRequest(status, batchNo), pageable);
     }
@@ -105,8 +105,8 @@ public class AdminLicenseController {
     @SaCheckPermission("license:export")
     @Operation(summary = "导出授权码", description = "导出为 CSV 格式")
     public void export(
-            @RequestParam(required = false) LicenseCode.Status status,
-            @RequestParam(required = false) String batchNo,
+            @RequestParam(name = "status", required = false) LicenseCode.Status status,
+            @RequestParam(name = "batchNo", required = false) String batchNo,
             HttpServletResponse response) throws IOException {
         response.setContentType("text/csv;charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=licenses.csv");

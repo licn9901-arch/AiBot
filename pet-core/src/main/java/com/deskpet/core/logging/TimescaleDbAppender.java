@@ -53,7 +53,7 @@ public class TimescaleDbAppender extends UnsynchronizedAppenderBase<ILoggingEven
     @Override
     public void start() {
         if (url == null || url.isBlank()) {
-            addError("TimescaleDB URL is not configured, appender will not start");
+            addWarn("TimescaleDB URL is not configured, appender will be disabled");
             return;
         }
         queue = new LinkedBlockingQueue<>(queueSize);

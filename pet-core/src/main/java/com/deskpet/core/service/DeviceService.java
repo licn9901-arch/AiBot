@@ -50,12 +50,12 @@ public class DeviceService {
         this.webSocketPushService = webSocketPushService;
     }
 
-    public Device register(String deviceId, String secret, String model, String productKey, String remark) {
+    public Device register(String deviceId, String secret, String model, String productKey, String remark,Long productId) {
         if (deviceRepository.existsById(deviceId)) {
             throw new BusinessException(ErrorCode.DEVICE_ALREADY_EXISTS);
         }
         SecretHash hashed = secretHasher.hash(secret);
-        Device device = new Device(deviceId, hashed.hash(), hashed.salt(), model, productKey, remark, Instant.now());
+        Device device = new Device(deviceId, hashed.hash(), hashed.salt(), model, productKey, productId, remark, Instant.now());
         return deviceRepository.save(device);
     }
 

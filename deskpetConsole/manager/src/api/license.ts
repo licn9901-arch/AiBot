@@ -9,7 +9,7 @@ export function generateLicenses(data: GenerateLicenseRequest): Promise<Generate
     return service.post('api/admin/licenses/generate', data)
 }
 
-export function revokeLicense(id: number): Promise<void> {
+export function revokeLicense(id: string): Promise<void> {
     return service.put(`api/admin/licenses/${id}/revoke`)
 }
 

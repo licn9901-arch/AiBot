@@ -1,7 +1,7 @@
 // 操作日志（对应后端 OperationLog 实体）
 export interface OperationLogEntry {
-  id: number
-  userId: number | null
+  id: string
+  userId: string | null
   deviceId: string | null
   action: string
   payload: Record<string, any> | null
@@ -22,7 +22,7 @@ export interface AppLogEntry {
 
 // 设备事件日志（对应 DeviceEvent 实体）
 export interface DeviceEventEntry {
-  id: number
+  id: string
   deviceId: string
   eventId: string
   eventType: string

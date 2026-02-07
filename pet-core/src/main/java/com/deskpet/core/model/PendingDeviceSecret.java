@@ -1,7 +1,9 @@
 package com.deskpet.core.model;
 
+import com.deskpet.core.persistence.SnowflakeIdentifierGenerator;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 
@@ -15,7 +17,8 @@ import java.time.Instant;
 public class PendingDeviceSecret {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GenericGenerator(name = "snowflake", type = SnowflakeIdentifierGenerator.class)
+    @GeneratedValue(generator = "snowflake")
     private Long id;
 
     @Column(name = "batch_no", nullable = false, length = 50)

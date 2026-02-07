@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres?currentSchema=deskpet&stringtype=unspecified}
+    url: "${DB_URL:jdbc:postgresql://localhost:5432/postgres?currentSchema=deskpet&stringtype=unspecified}"
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:123456}
   jpa:
@@ -13,6 +13,7 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -71,7 +72,7 @@ management:
 
 # TimescaleDB 时序库配置
 timescaledb:
-  enabled: ${TSDB_ENABLED:false}
+  enabled: ${TSDB_ENABLED:true}
   datasource:
     url: ${TSDB_URL:jdbc:postgresql://localhost:5433/deskpet_ts}
     username: ${TSDB_USER:deskpet}
@@ -79,3 +80,7 @@ timescaledb:
     driver-class-name: org.postgresql.Driver
   # Logback Appender 日志录入级别：WARN / INFO / DEBUG
   log-level: ${TSDB_LOG_LEVEL:INFO}
+
+# Snowflake 分布式 ID 配置
+snowflake:
+  worker-id: ${SNOWFLAKE_WORKER_ID:0}

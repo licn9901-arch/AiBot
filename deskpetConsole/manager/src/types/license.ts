@@ -1,13 +1,13 @@
 export type LicenseStatus = 'UNUSED' | 'ACTIVATED' | 'REVOKED'
 
 export interface LicenseCodeResponse {
-  id: number
+  id: string
   code: string
   batchNo: string | null
   status: LicenseStatus
   deviceId: string | null
   productKey: string | null
-  userId: number | null
+  userId: string | null
   activatedAt: string | null
   expiresAt: string | null
   remark: string | null
@@ -23,7 +23,7 @@ export interface GenerateLicenseRequest {
 }
 
 export interface GenerateLicenseResponse {
-  id: number
+  id: string
   code: string
   deviceId: string
   deviceSecret: string

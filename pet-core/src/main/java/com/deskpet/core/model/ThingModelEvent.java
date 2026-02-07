@@ -1,8 +1,11 @@
 package com.deskpet.core.model;
 
-import com.deskpet.core.persistence.JsonListConverter;
+import com.deskpet.core.persistence.SnowflakeIdentifierGenerator;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.List;
@@ -43,7 +46,8 @@ public class ThingModelEvent {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GenericGenerator(name = "snowflake", type = SnowflakeIdentifierGenerator.class)
+    @GeneratedValue(generator = "snowflake")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -59,7 +63,7 @@ public class ThingModelEvent {
     @Column(name = "event_type", nullable = false, length = 20)
     private String eventType;
 
-    @Convert(converter = JsonListConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "output_params", columnDefinition = "jsonb")
     private List<Map<String, Object>> outputParams;
 

@@ -7,7 +7,7 @@ export interface AdminLoginRequest {
 
 export interface AdminLoginResponse {
   token: string
-  userId: number
+  userId: string
   username: string
   roles: string[]
 }

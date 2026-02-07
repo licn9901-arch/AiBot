@@ -16,7 +16,7 @@ export interface UserRegisterRequest {
 }
 
 export interface UserResponse {
-  id: number
+  id: string
   username: string
   email: string | null
   phone: string | null

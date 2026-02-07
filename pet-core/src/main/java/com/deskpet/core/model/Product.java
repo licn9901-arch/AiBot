@@ -1,11 +1,13 @@
 package com.deskpet.core.model;
 
+import com.deskpet.core.persistence.SnowflakeIdentifierGenerator;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "product")
@@ -22,7 +24,8 @@ public class Product {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GenericGenerator(name = "snowflake", type = SnowflakeIdentifierGenerator.class)
+    @GeneratedValue(generator = "snowflake")
     private Long id;
 
     @Column(name = "product_key", nullable = false, unique = true, length = 50)
@@ -48,15 +51,15 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ThingModelProperty> properties = new ArrayList<>();
+    private Set<ThingModelProperty> properties = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ThingModelService> services = new ArrayList<>();
+    private Set<ThingModelService> services = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ThingModelEvent> events = new ArrayList<>();
+    private Set<ThingModelEvent> events = new LinkedHashSet<>();
 
     @PreUpdate
     public void preUpdate() {

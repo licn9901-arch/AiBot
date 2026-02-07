@@ -1,7 +1,9 @@
 package com.deskpet.core.model;
 
+import com.deskpet.core.persistence.SnowflakeIdentifierGenerator;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.Instant;
 
@@ -21,7 +23,8 @@ public class LicenseCode {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GenericGenerator(name = "snowflake", type = SnowflakeIdentifierGenerator.class)
+    @GeneratedValue(generator = "snowflake")
     private Long id;
 
     @Column(nullable = false, unique = true, length = 32)

@@ -9,7 +9,7 @@ export function getDevice(id: string): Promise<DeviceResponse> {
     return service.get(`api/devices/${id}`)
 }
 export interface TelemetryHistory {
-    id: number
+    id: string
     deviceId: string
     telemetry: Record<string, any>
     createdAt: string

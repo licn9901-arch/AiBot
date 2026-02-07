@@ -1,5 +1,5 @@
 export interface ProductResponse {
-  id: number
+  id: string
   productKey: string
   name: string
   description: string | null
@@ -21,7 +21,7 @@ export interface ProductUpdateRequest {
 }
 
 export interface PropertyDTO {
-  id: number
+  id: string
   identifier: string
   name: string
   dataType: string
@@ -44,7 +44,7 @@ export interface PropertyCreateRequest {
 }
 
 export interface ServiceDTO {
-  id: number
+  id: string
   identifier: string
   name: string
   callType: string
@@ -65,7 +65,7 @@ export interface ServiceCreateRequest {
 }
 
 export interface EventDTO {
-  id: number
+  id: string
   identifier: string
   name: string
   eventType: string
@@ -84,7 +84,7 @@ export interface EventCreateRequest {
 }
 
 export interface ThingModelDTO {
-  id: number
+  id: string
   productKey: string
   productName: string
   description: string | null

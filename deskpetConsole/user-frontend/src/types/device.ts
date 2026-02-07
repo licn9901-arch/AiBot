@@ -1,24 +1,23 @@
 export interface DeviceResponse {
   deviceId: string
+  model: string | null
   productKey: string
-  productName: string | null
   remark: string | null
-  connected: boolean
-  connectedAt: string | null
-  disconnectedAt: string | null
-  telemetry: Record<string, any> | null
   createdAt: string
+  online: boolean
+  lastSeen: string | null
+  telemetry: Record<string, any> | null
 }
 
 export interface TelemetryHistory {
-  id: number
+  id: string
   deviceId: string
   telemetry: Record<string, any>
   createdAt: string
 }
 
 export interface DeviceEventResponse {
-  id: number
+  id: string
   deviceId: string
   eventType: string
   params: Record<string, any> | null

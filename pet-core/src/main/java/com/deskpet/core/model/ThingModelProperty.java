@@ -1,8 +1,11 @@
 package com.deskpet.core.model;
 
-import com.deskpet.core.persistence.JsonMapConverter;
+import com.deskpet.core.persistence.SnowflakeIdentifierGenerator;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
@@ -69,7 +72,8 @@ public class ThingModelProperty {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GenericGenerator(name = "snowflake", type = SnowflakeIdentifierGenerator.class)
+    @GeneratedValue(generator = "snowflake")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -85,7 +89,7 @@ public class ThingModelProperty {
     @Column(name = "data_type", nullable = false, length = 20)
     private String dataType;
 
-    @Convert(converter = JsonMapConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> specs;
 

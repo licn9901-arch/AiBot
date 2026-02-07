@@ -11,6 +11,7 @@ import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.LicenseCode;
 import com.deskpet.core.model.PendingDeviceSecret;
+import com.deskpet.core.model.Product;
 import com.deskpet.core.repository.LicenseCodeRepository;
 import com.deskpet.core.repository.PendingDeviceSecretRepository;
 import com.deskpet.core.repository.ProductRepository;
@@ -56,7 +57,7 @@ public class LicenseCodeService {
         String productKey = request.productKey();
 
         // 验证产品存在
-        productRepository.findByProductKey(productKey)
+        Product product = productRepository.findByProductKey(productKey)
             .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "产品不存在: " + productKey));
 
         // 自动生成 batchNo（如果未提供）
@@ -94,7 +95,7 @@ public class LicenseCodeService {
             String rawSecret = generateRandomSecret();
 
             // 创建预绑定设备
-            deviceService.register(sn, rawSecret, null, productKey, null);
+            deviceService.register(sn, rawSecret, product.getName(), productKey, null,product.getId());
 
             // 构建授权码
             LicenseCode license = LicenseCode.builder()
@@ -210,8 +211,17 @@ public class LicenseCodeService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Page<LicenseCodeResponse> list(LicenseQueryRequest query, Pageable pageable) {
-        return licenseCodeRepository.findByFilters(query.status(), query.batchNo(), pageable)
-            .map(LicenseCodeResponse::from);
+        Page<LicenseCode> page;
+        if (query.status() != null && query.batchNo() != null) {
+            page = licenseCodeRepository.findByStatusAndBatchNo(query.status(), query.batchNo(), pageable);
+        } else if (query.status() != null) {
+            page = licenseCodeRepository.findByStatus(query.status(), pageable);
+        } else if (query.batchNo() != null) {
+            page = licenseCodeRepository.findByBatchNo(query.batchNo(), pageable);
+        } else {
+            page = licenseCodeRepository.findAll(pageable);
+        }
+        return page.map(LicenseCodeResponse::from);
     }
 
     /**
@@ -251,8 +261,14 @@ public class LicenseCodeService {
         writer.println("授权码,批次号,状态,设备ID,用户ID,激活时间,过期时间,创建时间");
 
         List<LicenseCode> licenses;
-        if (query.status() != null || query.batchNo() != null) {
-            licenses = licenseCodeRepository.findByFilters(query.status(), query.batchNo(), Pageable.unpaged())
+        if (query.status() != null && query.batchNo() != null) {
+            licenses = licenseCodeRepository.findByStatusAndBatchNo(query.status(), query.batchNo(), Pageable.unpaged())
+                .getContent();
+        } else if (query.status() != null) {
+            licenses = licenseCodeRepository.findByStatus(query.status(), Pageable.unpaged())
+                .getContent();
+        } else if (query.batchNo() != null) {
+            licenses = licenseCodeRepository.findByBatchNo(query.batchNo(), Pageable.unpaged())
                 .getContent();
         } else {
             licenses = licenseCodeRepository.findAll();

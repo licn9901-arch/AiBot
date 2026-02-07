@@ -12,7 +12,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const deviceStore = useDeviceStore()
 
-const onlineCount = computed(() => deviceStore.devices.filter(d => d.connected).length)
+const onlineCount = computed(() => deviceStore.devices.filter(d => d.online).length)
 const recentDevices = computed(() => deviceStore.devices.slice(0, 3))
 
 onMounted(async () => {
@@ -67,12 +67,12 @@ onMounted(async () => {
           v-for="device in recentDevices"
           :key="device.deviceId"
           :title="device.remark || device.deviceId"
-          :label="device.productName || device.productKey"
+          :label="device.model || device.productKey"
           is-link
           @click="router.push(`/devices/${device.deviceId}`)"
         >
           <template #right-icon>
-            <span class="status-dot" :class="device.connected ? 'online' : 'offline'" style="margin-right: 8px;"></span>
+            <span class="status-dot" :class="device.online ? 'online' : 'offline'" style="margin-right: 8px;"></span>
           </template>
         </VanCell>
       </VanCellGroup>
@@ -93,11 +93,11 @@ onMounted(async () => {
         >
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <span style="font-weight: 600;">{{ device.remark || device.deviceId }}</span>
-            <span class="status-dot" :class="device.connected ? 'online' : 'offline'"></span>
+            <span class="status-dot" :class="device.online ? 'online' : 'offline'"></span>
           </div>
-          <div style="font-size: 13px; color: var(--muted);">{{ device.productName || device.productKey }}</div>
+          <div style="font-size: 13px; color: var(--muted);">{{ device.model || device.productKey }}</div>
           <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">
-            {{ device.connected ? '在线' : `最后在线 ${formatRelativeTime(device.disconnectedAt)}` }}
+            {{ device.online ? '在线' : `最后在线 ${formatRelativeTime(device.lastSeen)}` }}
           </div>
         </div>
       </div>

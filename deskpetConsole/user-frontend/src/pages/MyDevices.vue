@@ -57,12 +57,12 @@ onMounted(() => {
           v-for="device in deviceStore.devices"
           :key="device.deviceId"
           :title="device.remark || device.deviceId"
-          :label="`${device.productName || device.productKey} · ${device.connected ? '在线' : '离线 ' + formatRelativeTime(device.disconnectedAt)}`"
+          :label="`${device.model || device.productKey} · ${device.online ? '在线' : '离线 ' + formatRelativeTime(device.lastSeen)}`"
           is-link
           @click="router.push(`/devices/${device.deviceId}`)"
         >
           <template #right-icon>
-            <span class="status-dot" :class="device.connected ? 'online' : 'offline'" style="margin-top: 12px;"></span>
+            <span class="status-dot" :class="device.online ? 'online' : 'offline'" style="margin-top: 12px;"></span>
           </template>
         </VanCell>
       </VanCellGroup>
@@ -82,18 +82,18 @@ onMounted(() => {
         >
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <span style="font-weight: 600; font-size: 15px;">{{ device.remark || device.deviceId }}</span>
-            <span class="tag" :class="device.connected ? 'success' : 'danger'">
-              {{ device.connected ? '在线' : '离线' }}
+            <span class="tag" :class="device.online ? 'success' : 'danger'">
+              {{ device.online ? '在线' : '离线' }}
             </span>
           </div>
           <div style="font-size: 13px; color: var(--muted);">
-            {{ device.productName || device.productKey }}
+            {{ device.model || device.productKey }}
           </div>
           <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">
             SN: {{ device.deviceId }}
           </div>
           <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
-            {{ device.connected ? '当前在线' : `最后在线 ${formatRelativeTime(device.disconnectedAt)}` }}
+            {{ device.online ? '当前在线' : `最后在线 ${formatRelativeTime(device.lastSeen)}` }}
           </div>
         </div>
       </div>

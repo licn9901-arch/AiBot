@@ -61,7 +61,7 @@ watch(commandStatus, (newStatus) => {
 // 监听 WebSocket 设备上下线推送，实时更新在线状态
 watch(presence, (newPresence) => {
   if (newPresence && device.value) {
-    device.value = { ...device.value, connected: newPresence.online }
+    device.value = { ...device.value, online: newPresence.online }
   }
 })
 
@@ -184,12 +184,12 @@ onMounted(() => {
       <div class="card" style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
           <h1 class="page-title" style="margin-bottom: 0;">{{ device.remark || device.deviceId }}</h1>
-          <span class="tag" :class="device.connected ? 'success' : 'danger'">
-            {{ device.connected ? '在线' : '离线' }}
+          <span class="tag" :class="device.online ? 'success' : 'danger'">
+            {{ device.online ? '在线' : '离线' }}
           </span>
         </div>
         <div style="font-size: 13px; color: var(--muted);">
-          SN: {{ device.deviceId }} · 产品: {{ device.productName || device.productKey }}
+          SN: {{ device.deviceId }} · 产品: {{ device.model || device.productKey }}
         </div>
       </div>
 

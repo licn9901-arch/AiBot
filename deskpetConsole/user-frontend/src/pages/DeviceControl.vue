@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -9,8 +9,9 @@ import {
 import * as echarts from 'echarts'
 import { useResponsive } from '@/composables/useResponsive'
 import { usePolling } from '@/composables/usePolling'
+import { useDeviceWebSocket } from '@/composables/useWebSocket'
 import { getDevice, getDeviceTelemetryHistory, getDeviceEvents } from '@/api/device'
-import { sendCommand, getCommand } from '@/api/command'
+import { sendCommand } from '@/api/command'
 import type { DeviceResponse, TelemetryHistory, DeviceEventResponse } from '@/types/device'
 import type { CommandResponse } from '@/types/command'
 import { formatTime } from '@/utils/format'
@@ -22,6 +23,9 @@ const deviceId = route.params.deviceId as string
 const device = ref<DeviceResponse | null>(null)
 const activeTab = ref('control')
 const loading = ref(true)
+
+// WebSocket 实时通信
+const { commandStatus, presence, connect: wsConnect } = useDeviceWebSocket(deviceId)
 
 // 控制相关
 const presetCommands = [
@@ -47,6 +51,20 @@ let chartInstance: echarts.ECharts | null = null
 // 事件相关
 const events = ref<DeviceEventResponse[]>([])
 
+// 监听 WebSocket 指令状态推送，自动更新 lastCommand
+watch(commandStatus, (newStatus) => {
+  if (newStatus && lastCommand.value && newStatus.reqId === lastCommand.value.reqId) {
+    lastCommand.value = newStatus
+  }
+})
+
+// 监听 WebSocket 设备上下线推送，实时更新在线状态
+watch(presence, (newPresence) => {
+  if (newPresence && device.value) {
+    device.value = { ...device.value, connected: newPresence.online }
+  }
+})
+
 async function fetchDevice() {
   try {
     device.value = await getDevice(deviceId)
@@ -65,8 +83,7 @@ async function handleSendCommand(type: string, payload: Record<string, any>) {
     lastCommand.value = cmd
     const msg = '指令已下发'
     isMobile.value ? showToast(msg) : ElMessage.success(msg)
-    // 轮询指令状态
-    pollCommandStatus(cmd.reqId)
+    // 指令状态通过 WebSocket 实时推送，无需轮询
   } catch {
     // 错误已处理
   } finally {
@@ -87,23 +104,6 @@ async function handleCustomCommand() {
     const msg = 'Payload 必须是合法的 JSON'
     isMobile.value ? showToast(msg) : ElMessage.error(msg)
   }
-}
-
-async function pollCommandStatus(reqId: string) {
-  let attempts = 0
-  const poll = setInterval(async () => {
-    attempts++
-    try {
-      const cmd = await getCommand(deviceId, reqId)
-      lastCommand.value = cmd
-      if (cmd.status !== 'PENDING' && cmd.status !== 'SENT') {
-        clearInterval(poll)
-      }
-    } catch {
-      clearInterval(poll)
-    }
-    if (attempts >= 10) clearInterval(poll)
-  }, 2000)
 }
 
 async function fetchTelemetry() {
@@ -163,6 +163,7 @@ usePolling(fetchDevice, 10000)
 
 onMounted(() => {
   fetchDevice()
+  wsConnect()
 })
 </script>
 

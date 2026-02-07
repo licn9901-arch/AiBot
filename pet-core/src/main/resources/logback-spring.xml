@@ -2,6 +2,11 @@
 <configuration>
     <springProperty scope="context" name="LOG_LEVEL" source="LOG_LEVEL" defaultValue="INFO"/>
     <springProperty scope="context" name="LOG_FILE" source="LOG_FILE" defaultValue="logs/pet-core.log"/>
+    <springProperty scope="context" name="TSDB_ENABLED" source="timescaledb.enabled" defaultValue="false"/>
+    <springProperty scope="context" name="TSDB_URL" source="timescaledb.datasource.url" defaultValue=""/>
+    <springProperty scope="context" name="TSDB_USER" source="timescaledb.datasource.username" defaultValue=""/>
+    <springProperty scope="context" name="TSDB_PASSWORD" source="timescaledb.datasource.password" defaultValue=""/>
+    <springProperty scope="context" name="TSDB_LOG_LEVEL" source="timescaledb.log-level" defaultValue="WARN"/>
     <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -31,4 +36,25 @@
             <appender-ref ref="FILE"/>
         </root>
     </springProfile>
+
+    <!-- TimescaleDB 日志 Appender：当 timescaledb.enabled=true 时生效 -->
+    <if condition='property("TSDB_ENABLED").equalsIgnoreCase("true")'>
+        <then>
+            <appender name="TSDB" class="com.deskpet.core.logging.TimescaleDbAppender">
+                <url>${TSDB_URL}</url>
+                <username>${TSDB_USER}</username>
+                <password>${TSDB_PASSWORD}</password>
+                <batchSize>50</batchSize>
+                <flushIntervalMs>5000</flushIntervalMs>
+                <queueSize>10000</queueSize>
+                <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+                    <level>${TSDB_LOG_LEVEL}</level>
+                </filter>
+            </appender>
+
+            <root level="${LOG_LEVEL}">
+                <appender-ref ref="TSDB"/>
+            </root>
+        </then>
+    </if>
 </configuration>

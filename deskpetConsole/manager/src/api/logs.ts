@@ -1,44 +1,61 @@
-import type { LogEntry, AlertEntry, LogLevel } from '../types/logs'
+import service from '@/utils/request'
 
-const MOCK_LOGS: LogEntry[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `log-${i}`,
-    timestamp: new Date(Date.now() - i * 60000).toISOString(),
-    level: (i % 10 === 0 ? 'error' : i % 5 === 0 ? 'warning' : 'info') as LogLevel,
-    module: ['System', 'Network', 'Device', 'Auth'][i % 4]!,
-    message: `Log message example ${i} - detailed description of the event`
-}))
-
-const MOCK_ALERTS: AlertEntry[] = Array.from({ length: 10 }, (_, i) => ({
-    id: `alert-${i}`,
-    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-    level: (i % 3 === 0 ? 'critical' : 'warning') as AlertEntry['level'],
-    source: ['CPU', 'Memory', 'Disk', 'Network'][i % 4]!,
-    message: `System alert ${i}: threshold exceeded`,
-    status: i % 2 === 0 ? 'active' : 'resolved'
-}))
-
-export async function fetchLogs(params: { level?: string; search?: string } = {}): Promise<LogEntry[]> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    let logs = [...MOCK_LOGS]
-
-    if (params.level) {
-        logs = logs.filter(log => log.level === params.level)
-    }
-
-    if (params.search) {
-        const search = params.search.toLowerCase()
-        logs = logs.filter(log =>
-            log.message.toLowerCase().includes(search) ||
-            log.module.toLowerCase().includes(search)
-        )
-    }
-
-    return logs
+// 通用分页响应（所有日志端点统一返回格式）
+export interface LogPageResponse {
+  content: Record<string, any>[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+  message?: string
 }
 
-export async function fetchAlerts(): Promise<AlertEntry[]> {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    return [...MOCK_ALERTS]
+// 操作日志查询参数
+export interface OperationLogParams {
+  userId?: number
+  deviceId?: string
+  action?: string
+  startTime?: string
+  endTime?: string
+  page?: number
+  size?: number
+}
+
+// 应用日志查询参数
+export interface AppLogParams {
+  level?: string
+  logger?: string
+  search?: string
+  hours?: number
+  page?: number
+  size?: number
+}
+
+// 设备事件查询参数
+export interface DeviceEventParams {
+  deviceId?: string
+  eventType?: string
+  hours?: number
+  page?: number
+  size?: number
+}
+
+// 操作日志
+export function getOperationLogs(params: OperationLogParams = {}): Promise<LogPageResponse> {
+  return service.get('api/admin/logs', { params })
+}
+
+// 应用日志
+export function getAppLogs(params: AppLogParams = {}): Promise<LogPageResponse> {
+  return service.get('api/admin/logs/app', { params })
+}
+
+// 应用日志统计
+export function getAppLogStats(hours: number = 24): Promise<Record<string, any>> {
+  return service.get('api/admin/logs/app/stats', { params: { hours } })
+}
+
+// 设备事件
+export function getDeviceEventLogs(params: DeviceEventParams = {}): Promise<LogPageResponse> {
+  return service.get('api/admin/logs/events', { params })
 }

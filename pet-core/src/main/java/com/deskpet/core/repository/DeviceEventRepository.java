@@ -38,6 +38,19 @@ public interface DeviceEventRepository extends JpaRepository<DeviceEvent, Long> 
             @Param("endTime") Instant endTime,
             Pageable pageable);
 
+    @Query("SELECT e FROM DeviceEvent e WHERE " +
+           "(:deviceId IS NULL OR e.deviceId = :deviceId) " +
+           "AND (:eventType IS NULL OR e.eventType = :eventType) " +
+           "AND (:startTime IS NULL OR e.createdAt >= :startTime) " +
+           "AND (:endTime IS NULL OR e.createdAt <= :endTime) " +
+           "ORDER BY e.createdAt DESC")
+    Page<DeviceEvent> findAllByFilters(
+            @Param("deviceId") String deviceId,
+            @Param("eventType") String eventType,
+            @Param("startTime") Instant startTime,
+            @Param("endTime") Instant endTime,
+            Pageable pageable);
+
     @Query("SELECT COUNT(e) FROM DeviceEvent e WHERE e.deviceId = :deviceId AND e.eventType = :eventType")
     long countByDeviceIdAndEventType(@Param("deviceId") String deviceId, @Param("eventType") String eventType);
 

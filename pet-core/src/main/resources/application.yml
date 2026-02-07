@@ -68,3 +68,14 @@ management:
     web:
       exposure:
         include: health,info
+
+# TimescaleDB 时序库配置
+timescaledb:
+  enabled: ${TSDB_ENABLED:false}
+  datasource:
+    url: ${TSDB_URL:jdbc:postgresql://localhost:5433/deskpet_ts}
+    username: ${TSDB_USER:deskpet}
+    password: ${TSDB_PASSWORD:deskpet}
+    driver-class-name: org.postgresql.Driver
+  # Logback Appender 日志录入级别：WARN / INFO / DEBUG
+  log-level: ${TSDB_LOG_LEVEL:INFO}

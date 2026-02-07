@@ -33,6 +33,8 @@ public class SaTokenConfig implements WebMvcConfigurer {
                     "/webjars/**",
                     // Actuator
                     "/actuator/**",
+                    // WebSocket 端点（握手走自己的认证拦截器）
+                    "/ws/**",
                     // 错误页面
                     "/error"
                 )

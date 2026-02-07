@@ -92,9 +92,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { getDevices, sendCommand, getCommand } from '@/api/device'
 import type { DeviceResponse } from '@/types/device'
+import { useDeviceWebSocket } from '@/composables/useWebSocket'
 
 interface CommandLogItem {
   reqId: string
@@ -110,6 +111,38 @@ const commandType = ref('setEmotion')
 const commandPayload = ref('{\n  "emotion": "happy"\n}')
 const sending = ref(false)
 const commandLog = ref<CommandLogItem[]>([])
+
+// WebSocket 实时通信
+const { commandStatus, connected: wsConnected, connect: wsConnect, subscribeDevice } = useDeviceWebSocket()
+
+// 监听设备切换，重新订阅 WebSocket
+watch(selectedDeviceId, (newId) => {
+  if (newId && wsConnected.value) {
+    subscribeDevice(newId)
+  }
+})
+
+// 监听 WebSocket 连接状态，连接成功后订阅当前设备
+watch(wsConnected, (isConnected) => {
+  if (isConnected && selectedDeviceId.value) {
+    subscribeDevice(selectedDeviceId.value)
+  }
+})
+
+// 监听 WebSocket 指令状态推送，自动更新 commandLog
+watch(commandStatus, (newStatus) => {
+  if (!newStatus) return
+  const item = commandLog.value.find(c => c.reqId === newStatus.reqId)
+  if (item) {
+    item.status = newStatus.status
+    if (newStatus.ackPayload) {
+      item.result = newStatus.ackPayload
+    }
+    if (newStatus.error) {
+      item.result = { error: newStatus.error }
+    }
+  }
+})
 
 const suggestedTypes = [
   { value: 'setEmotion' },
@@ -203,6 +236,7 @@ function clearLog() {
 
 onMounted(() => {
   loadDevices()
+  wsConnect()
 })
 </script>
 

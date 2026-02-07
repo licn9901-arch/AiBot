@@ -80,6 +80,16 @@
             <artifactId>easyexcel</artifactId>
             <version>4.0.3</version>
         </dependency>
+        <!-- Janino：logback 条件判断支持 -->
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+        </dependency>
+        <!-- WebSocket + STOMP 支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>

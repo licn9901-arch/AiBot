@@ -1,9 +1,7 @@
 package com.deskpet.core.controller;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
-import com.deskpet.core.dto.DeviceEventResponse;
 import com.deskpet.core.dto.DeviceRegistrationRequest;
 import com.deskpet.core.dto.DeviceResponse;
 import com.deskpet.core.error.BusinessException;
@@ -11,40 +9,42 @@ import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.model.DeviceSession;
 import com.deskpet.core.model.TelemetryLatest;
-import com.deskpet.core.service.DeviceEventService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.LicenseCodeService;
+import com.deskpet.core.service.TimeSeriesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/devices")
-@RequiredArgsConstructor
 @Tag(name = "设备管理", description = "设备注册与查询")
 public class DeviceController {
 
     private final DeviceService deviceService;
     private final LicenseCodeService licenseCodeService;
-    private final DeviceEventService deviceEventService;
+
+    private TimeSeriesService timeSeriesService;
+
+    public DeviceController(DeviceService deviceService,
+                            LicenseCodeService licenseCodeService) {
+        this.deviceService = deviceService;
+        this.licenseCodeService = licenseCodeService;
+    }
+
+    @Autowired(required = false)
+    public void setTimeSeriesService(TimeSeriesService timeSeriesService) {
+        this.timeSeriesService = timeSeriesService;
+    }
 
     @GetMapping
     @SaCheckPermission("device:list")
@@ -90,8 +90,8 @@ public class DeviceController {
 
     @GetMapping("/{deviceId}/telemetry/history")
     @SaCheckPermission("device:view")
-    @Operation(summary = "遥测历史", description = "查询最近 N 小时的遥测数据")
-    public List<com.deskpet.core.model.TelemetryHistory> getTelemetryHistory(
+    @Operation(summary = "遥测历史", description = "查询最近 N 小时的遥测数据（从 TimescaleDB）")
+    public List<Map<String, Object>> getTelemetryHistory(
             @PathVariable String deviceId,
             @RequestParam(defaultValue = "24") int hours) {
         // 非管理员需校验设备归属
@@ -101,19 +101,23 @@ public class DeviceController {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看此设备");
             }
         }
-        return deviceService.findTelemetryHistory(deviceId, Duration.ofHours(hours));
+        if (timeSeriesService == null) {
+            return List.of();
+        }
+        return timeSeriesService.queryTelemetryTimeSeries(deviceId,
+            Instant.now().minus(Duration.ofHours(hours)));
     }
 
     @GetMapping("/{deviceId}/events")
     @SaCheckPermission("device:view")
-    @Operation(summary = "设备事件历史", description = "查询设备上报的事件")
-    public Page<DeviceEventResponse> getDeviceEvents(
+    @Operation(summary = "设备事件历史", description = "查询设备上报的事件（从 TimescaleDB）")
+    public Map<String, Object> getDeviceEvents(
             @PathVariable String deviceId,
-            @RequestParam(required = false) String eventId,
             @RequestParam(required = false) String eventType,
             @RequestParam(required = false) Instant startTime,
             @RequestParam(required = false) Instant endTime,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -121,12 +125,25 @@ public class DeviceController {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看此设备");
             }
         }
-        return deviceEventService.findEvents(deviceId, eventId, eventType, startTime, endTime, pageable);
+        if (timeSeriesService == null) {
+            return Map.of("content", List.of(), "totalElements", 0L, "number", page, "size", size);
+        }
+        List<Map<String, Object>> content = timeSeriesService.queryDeviceEvents(
+                deviceId, eventType, startTime, endTime, size, page * size);
+        long total = timeSeriesService.countDeviceEvents(deviceId, eventType, startTime, endTime);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", content);
+        result.put("totalElements", total);
+        result.put("totalPages", (total + size - 1) / size);
+        result.put("number", page);
+        result.put("size", size);
+        return result;
     }
 
     @GetMapping("/{deviceId}/events/stats")
     @SaCheckPermission("device:view")
-    @Operation(summary = "设备事件统计", description = "统计设备事件数量")
+    @Operation(summary = "设备事件统计", description = "统计设备事件数量（从 TimescaleDB）")
     public Map<String, Object> getDeviceEventStats(
             @PathVariable String deviceId,
             @RequestParam(defaultValue = "24") int hours) {
@@ -137,6 +154,65 @@ public class DeviceController {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看此设备");
             }
         }
-        return deviceEventService.getEventStats(deviceId, Duration.ofHours(hours));
+        if (timeSeriesService == null) {
+            return Map.of("deviceId", deviceId, "total", 0L);
+        }
+        Instant since = Instant.now().minus(Duration.ofHours(hours));
+        List<Map<String, Object>> stats = timeSeriesService.queryDeviceEventStats(deviceId, since);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("deviceId", deviceId);
+        long total = 0;
+        Map<String, Long> byType = new HashMap<>();
+        for (Map<String, Object> row : stats) {
+            String type = (String) row.get("event_type");
+            Long count = (Long) row.get("count");
+            byType.put(type, count);
+            total += count;
+        }
+        result.put("total", total);
+        result.put("byType", byType);
+        result.put("duration", "PT" + hours + "H");
+        return result;
+    }
+
+    @GetMapping("/{deviceId}/sessions")
+    @SaCheckPermission("device:view")
+    @Operation(summary = "设备上下线历史", description = "查询设备上下线记录（需启用 TimescaleDB）")
+    public List<Map<String, Object>> getDeviceSessionHistory(
+            @PathVariable String deviceId,
+            @RequestParam(defaultValue = "24") int hours) {
+        // 非管理员需校验设备归属
+        if (!StpUtil.hasRole("ADMIN")) {
+            long userId = StpUtil.getLoginIdAsLong();
+            if (!licenseCodeService.hasDevice(userId, deviceId)) {
+                throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看此设备");
+            }
+        }
+        if (timeSeriesService == null) {
+            return List.of();
+        }
+        return timeSeriesService.queryDeviceSessionHistory(deviceId,
+            Instant.now().minus(Duration.ofHours(hours)));
+    }
+
+    @GetMapping("/{deviceId}/sessions/stats")
+    @SaCheckPermission("device:view")
+    @Operation(summary = "设备上下线统计", description = "统计设备上下线次数（需启用 TimescaleDB）")
+    public Map<String, Object> getDeviceSessionStats(
+            @PathVariable String deviceId,
+            @RequestParam(defaultValue = "24") int hours) {
+        // 非管理员需校验设备归属
+        if (!StpUtil.hasRole("ADMIN")) {
+            long userId = StpUtil.getLoginIdAsLong();
+            if (!licenseCodeService.hasDevice(userId, deviceId)) {
+                throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看此设备");
+            }
+        }
+        if (timeSeriesService == null) {
+            return Map.of("deviceId", deviceId, "onlineCount", 0L, "offlineCount", 0L);
+        }
+        return timeSeriesService.queryDeviceSessionStats(deviceId,
+            Instant.now().minus(Duration.ofHours(hours)));
     }
 }

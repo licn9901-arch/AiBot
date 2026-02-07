@@ -1,6 +1,6 @@
 # 对外 API 文档
 
-适用范围：DeskPet V0.3
+适用范围：DeskPet V0.5
 
 ## 1. 访问方式
 
@@ -606,4 +606,73 @@ DELETE /api/admin/products/{productKey}/events/{id}     # 删除事件
 # 导入导出
 GET    /api/admin/products/{productKey}/export          # 导出物模型
 POST   /api/admin/products/{productKey}/import          # 导入物模型
+```
+
+---
+
+## WebSocket 实时推送接口（V0.5）
+
+### 连接方式
+
+- 端点：`/ws`（SockJS）
+- 协议：STOMP over WebSocket
+- 认证：STOMP CONNECT 帧中携带 `Authorization: Bearer {token}`
+
+### 连接示例
+
+```javascript
+import SockJS from 'sockjs-client/dist/sockjs.min.js'
+import { Client } from '@stomp/stompjs'
+
+const client = new Client({
+  webSocketFactory: () => new SockJS('/ws'),
+  connectHeaders: { Authorization: `Bearer ${token}` },
+  onConnect: () => {
+    // 订阅指令状态
+    client.subscribe('/topic/device/pet001/command-status', (msg) => {
+      console.log(JSON.parse(msg.body))
+    })
+    // 订阅设备上下线
+    client.subscribe('/topic/device/pet001/presence', (msg) => {
+      console.log(JSON.parse(msg.body))
+    })
+  },
+  reconnectDelay: 3000,
+})
+client.activate()
+```
+
+### 订阅 Topic
+
+| Topic | 说明 | 触发时机 |
+|-------|------|----------|
+| `/topic/device/{deviceId}/command-status` | 指令状态变更 | 指令状态变为 SENT/ACKED/FAILED/TIMEOUT 时 |
+| `/topic/device/{deviceId}/presence` | 设备上下线 | 设备连接/断开 MQTT 时 |
+
+### 消息格式
+
+#### 指令状态推送
+
+```json
+{
+  "reqId": "b1f2a9c6-4a0e-4b0b-9d3b-1a2b3c4d5e6f",
+  "deviceId": "pet001",
+  "type": "move",
+  "payload": {"direction": "forward"},
+  "status": "ACKED",
+  "ackCode": "DONE",
+  "ackMessage": "moved forward",
+  "createdAt": "2026-02-07T10:00:00Z",
+  "updatedAt": "2026-02-07T10:00:01Z"
+}
+```
+
+#### 设备上下线推送
+
+```json
+{
+  "deviceId": "pet001",
+  "online": true,
+  "ts": "2026-02-07T10:00:00Z"
+}
 ```

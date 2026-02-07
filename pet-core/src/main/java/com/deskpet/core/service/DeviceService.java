@@ -10,9 +10,8 @@ import com.deskpet.core.security.SecretHash;
 import com.deskpet.core.security.SecretHasher;
 import com.deskpet.core.repository.DeviceRepository;
 import com.deskpet.core.repository.DeviceSessionRepository;
-import com.deskpet.core.repository.TelemetryHistoryRepository;
 import com.deskpet.core.repository.TelemetryLatestRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -22,13 +21,34 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor()
 public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final DeviceSessionRepository sessionRepository;
     private final TelemetryLatestRepository telemetryLatestRepository;
-    private final TelemetryHistoryRepository telemetryHistoryRepository;
     private final SecretHasher secretHasher;
+
+    private TimeSeriesService timeSeriesService;
+    private WebSocketPushService webSocketPushService;
+
+    public DeviceService(DeviceRepository deviceRepository,
+                         DeviceSessionRepository sessionRepository,
+                         TelemetryLatestRepository telemetryLatestRepository,
+                         SecretHasher secretHasher) {
+        this.deviceRepository = deviceRepository;
+        this.sessionRepository = sessionRepository;
+        this.telemetryLatestRepository = telemetryLatestRepository;
+        this.secretHasher = secretHasher;
+    }
+
+    @Autowired(required = false)
+    public void setTimeSeriesService(TimeSeriesService timeSeriesService) {
+        this.timeSeriesService = timeSeriesService;
+    }
+
+    @Autowired(required = false)
+    public void setWebSocketPushService(WebSocketPushService webSocketPushService) {
+        this.webSocketPushService = webSocketPushService;
+    }
 
     public Device register(String deviceId, String secret, String model, String productKey, String remark) {
         if (deviceRepository.existsById(deviceId)) {
@@ -60,19 +80,33 @@ public class DeviceService {
     }
 
     public DeviceSession markOnline(String deviceId, String gatewayInstanceId, String ip) {
-        DeviceSession session = new DeviceSession(deviceId, true, gatewayInstanceId, ip, Instant.now());
-        return sessionRepository.save(session);
+        Instant now = Instant.now();
+        DeviceSession session = new DeviceSession(deviceId, true, gatewayInstanceId, ip, now);
+        // 写入上下线历史到 TimescaleDB
+        if (timeSeriesService != null) {
+            timeSeriesService.writeDeviceSession(deviceId, true, gatewayInstanceId, ip, now);
+        }
+        DeviceSession saved = sessionRepository.save(session);
+        // 推送设备上线事件
+        if (webSocketPushService != null) {
+            webSocketPushService.pushPresence(deviceId, true);
+        }
+        return saved;
     }
 
     public DeviceSession markOffline(String deviceId, String gatewayInstanceId, String ip) {
-        DeviceSession session = new DeviceSession(deviceId, false, gatewayInstanceId, ip, Instant.now());
-        return sessionRepository.save(session);
-    }
-
-    public java.util.List<com.deskpet.core.model.TelemetryHistory> findTelemetryHistory(String deviceId,
-            java.time.Duration duration) {
-        return telemetryHistoryRepository.findByDeviceIdAndCreatedAtAfterOrderByCreatedAtAsc(deviceId,
-                Instant.now().minus(duration));
+        Instant now = Instant.now();
+        DeviceSession session = new DeviceSession(deviceId, false, gatewayInstanceId, ip, now);
+        // 写入上下线历史到 TimescaleDB
+        if (timeSeriesService != null) {
+            timeSeriesService.writeDeviceSession(deviceId, false, gatewayInstanceId, ip, now);
+        }
+        DeviceSession saved = sessionRepository.save(session);
+        // 推送设备下线事件
+        if (webSocketPushService != null) {
+            webSocketPushService.pushPresence(deviceId, false);
+        }
+        return saved;
     }
 
     /**

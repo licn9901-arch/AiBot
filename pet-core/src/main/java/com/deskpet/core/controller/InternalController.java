@@ -2,7 +2,6 @@ package com.deskpet.core.controller;
 
 import com.deskpet.core.dto.AckRequest;
 import com.deskpet.core.dto.DeviceEventRequest;
-import com.deskpet.core.dto.DeviceEventResponse;
 import com.deskpet.core.dto.GatewayPresenceRequest;
 import com.deskpet.core.dto.TelemetryRequest;
 import com.deskpet.core.model.Device;
@@ -79,9 +78,9 @@ public class InternalController {
     }
 
     @PostMapping("/event/{deviceId}")
-    public ResponseEntity<DeviceEventResponse> event(@PathVariable String deviceId,
+    public ResponseEntity<Void> event(@PathVariable String deviceId,
                                                      @RequestBody DeviceEventRequest request) {
-        DeviceEventResponse response = deviceEventService.recordEvent(deviceId, request);
-        return ResponseEntity.accepted().body(response);
+        deviceEventService.recordEvent(deviceId, request);
+        return ResponseEntity.accepted().build();
     }
 }

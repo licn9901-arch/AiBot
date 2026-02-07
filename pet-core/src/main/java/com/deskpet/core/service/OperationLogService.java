@@ -1,12 +1,10 @@
 package com.deskpet.core.service;
 
-import com.deskpet.core.model.OperationLog;
-import com.deskpet.core.repository.OperationLogRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -17,16 +15,23 @@ import java.util.Map;
 
 /**
  * 操作日志服务
+ * 操作日志写入 TimescaleDB，不再写入 PostgreSQL
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OperationLogService {
 
-    private final OperationLogRepository operationLogRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private TimeSeriesService timeSeriesService;
+
+    @Autowired(required = false)
+    public void setTimeSeriesService(TimeSeriesService timeSeriesService) {
+        this.timeSeriesService = timeSeriesService;
+    }
 
     /**
-     * 记录操作日志（异步）
+     * 记录操作日志（异步，写入 TimescaleDB）
      */
     @Async
     public void log(Long userId, String deviceId, String action, Object payload) {
@@ -52,44 +57,34 @@ public class OperationLogService {
                 }
             }
 
-            OperationLog operationLog = OperationLog.builder()
-                .userId(userId)
-                .deviceId(deviceId)
-                .action(action)
-                .payload(payloadMap)
-                .ip(ip)
-                .userAgent(userAgent != null && userAgent.length() > 500 ? userAgent.substring(0, 500) : userAgent)
-                .createdAt(Instant.now())
-                .build();
+            String truncatedUserAgent = userAgent != null && userAgent.length() > 500
+                ? userAgent.substring(0, 500) : userAgent;
 
-            operationLogRepository.save(operationLog);
+            writeToTimescaleDb(userId, deviceId, action, payloadMap, ip, truncatedUserAgent, Instant.now());
         } catch (Exception e) {
             log.error("Failed to save operation log: userId={}, action={}", userId, action, e);
         }
     }
 
     /**
-     * 同步记录日志
+     * 同步记录日志（写入 TimescaleDB）
      */
     public void logSync(Long userId, String deviceId, String action, Map<String, Object> payload, String ip, String userAgent) {
-        OperationLog operationLog = OperationLog.builder()
-            .userId(userId)
-            .deviceId(deviceId)
-            .action(action)
-            .payload(payload)
-            .ip(ip)
-            .userAgent(userAgent)
-            .createdAt(Instant.now())
-            .build();
-        operationLogRepository.save(operationLog);
+        writeToTimescaleDb(userId, deviceId, action, payload, ip, userAgent, Instant.now());
     }
 
-    /**
-     * 查询操作日志
-     */
-    public Page<OperationLog> findByFilters(Long userId, String deviceId, String action,
-                                            Instant startTime, Instant endTime, Pageable pageable) {
-        return operationLogRepository.findByFilters(userId, deviceId, action, startTime, endTime, pageable);
+    private void writeToTimescaleDb(Long userId, String deviceId, String action,
+                                    Map<String, Object> payload, String ip, String userAgent, Instant time) {
+        if (timeSeriesService == null) {
+            log.warn("TimeSeriesService not available, operation log dropped: action={}", action);
+            return;
+        }
+        try {
+            String payloadJson = payload != null ? objectMapper.writeValueAsString(payload) : null;
+            timeSeriesService.writeOperationLog(userId, deviceId, action, payloadJson, ip, userAgent, time);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize operation log payload for TimescaleDB: action={}", action, e);
+        }
     }
 
     private String getClientIp(HttpServletRequest request) {

@@ -95,3 +95,23 @@ export interface ThingModelDTO {
   createdAt: string
   updatedAt: string | null
 }
+
+// 参数项接口，用于服务/事件的输入输出参数
+export interface ParamItem {
+  identifier: string
+  name: string
+  dataType: string
+  specs?: Record<string, any>
+}
+
+// 数据类型选项
+export const DATA_TYPE_OPTIONS = [
+  { label: 'int', value: 'int' },
+  { label: 'float', value: 'float' },
+  { label: 'double', value: 'double' },
+  { label: 'bool', value: 'bool' },
+  { label: 'string', value: 'string' },
+  { label: 'enum', value: 'enum' },
+  { label: 'struct', value: 'struct' },
+  { label: 'array', value: 'array' },
+] as const

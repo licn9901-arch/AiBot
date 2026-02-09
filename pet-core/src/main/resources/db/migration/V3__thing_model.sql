@@ -106,19 +106,19 @@ BEGIN
     -- 初始化服务定义
     INSERT INTO thing_model_service (product_id, identifier, name, call_type, input_params, output_params, description, sort_order) VALUES
     (v_product_id, 'move', '移动控制', 'async',
-     '[{"identifier": "direction", "name": "方向", "dataType": "enum", "specs": {"values": ["forward", "backward", "left", "right", "stop"]}},
+     '[{"identifier": "direction", "name": "方向", "dataType": "enum", "specs": {"values": [{"value": "forward", "name": "向前"}, {"value": "backward", "name": "向后"}, {"value": "left", "name": "向左"}, {"value": "right", "name": "向右"}, {"value": "stop", "name": "停"}]}},
        {"identifier": "speed", "name": "速度", "dataType": "float", "specs": {"min": 0, "max": 1.0}},
        {"identifier": "durationMs", "name": "持续时间", "dataType": "int", "specs": {"min": 0, "max": 5000, "unit": "ms"}}]',
      '[]', '控制桌宠移动', 1),
     (v_product_id, 'setEmotion', '设置表情', 'async',
-     '[{"identifier": "emotion", "name": "表情", "dataType": "enum", "specs": {"values": ["happy", "sad", "angry", "sleepy", "idle", "excited", "confused"]}}]',
+     '[{"identifier": "emotion", "name": "表情", "dataType": "enum", "specs": {"values": [{"value": "happy", "name": "开心"}, {"value": "sad", "name": "伤心"}, {"value": "angry", "name": "生气"}, {"value": "sleepy", "name": "困倦"}, {"value": "idle", "name": "待机"}, {"value": "excited", "name": "兴奋"}, {"value": "confused", "name": "困惑"}]}}]',
      '[]', '设置桌宠表情', 2),
     (v_product_id, 'speak', '语音播报', 'async',
      '[{"identifier": "text", "name": "文本", "dataType": "string", "specs": {"maxLength": 200}},
-       {"identifier": "voice", "name": "音色", "dataType": "enum", "specs": {"values": ["default", "cute", "robot"]}}]',
+       {"identifier": "voice", "name": "音色", "dataType": "enum", "specs": {"values": [{"value": "default", "name": "默认"}, {"value": "cute", "name": "可爱"}, {"value": "robot", "name": "机器人"}]}}]',
      '[]', '播放语音', 3),
     (v_product_id, 'playAnimation', '播放动画', 'async',
-     '[{"identifier": "animation", "name": "动画", "dataType": "enum", "specs": {"values": ["wave", "dance", "nod", "shake", "sleep", "wakeup"]}}]',
+     '[{"identifier": "animation", "name": "动画", "dataType": "enum", "specs": {"values": [{"value": "wave", "name": "摇摆"}, {"value": "dance", "name": "跳舞"}, {"value": "nod", "name": "点头"}, {"value": "shake", "name": "摇头"}, {"value": "sleep", "name": "睡觉"}, {"value": "wakeup", "name": "醒来"}]}}]',
      '[]', '播放预设动画', 4),
     (v_product_id, 'setBrightness', '设置亮度', 'async',
      '[{"identifier": "brightness", "name": "亮度", "dataType": "int", "specs": {"min": 0, "max": 100, "unit": "%"}}]',
@@ -132,11 +132,11 @@ BEGIN
     -- 初始化事件定义
     INSERT INTO thing_model_event (product_id, identifier, name, event_type, output_params, description, sort_order) VALUES
     (v_product_id, 'collision', '碰撞事件', 'alert',
-     '[{"identifier": "direction", "name": "碰撞方向", "dataType": "enum", "specs": {"values": ["front", "back", "left", "right"]}},
+     '[{"identifier": "direction", "name": "碰撞方向", "dataType": "enum", "specs": {"values": [{"value": "front", "name": "前方"}, {"value": "back", "name": "后方"}, {"value": "left", "name": "左侧"}, {"value": "right", "name": "右侧"}]}},
        {"identifier": "intensity", "name": "碰撞强度", "dataType": "int", "specs": {"min": 0, "max": 100}}]',
      '设备检测到碰撞', 1),
     (v_product_id, 'touch', '触摸事件', 'info',
-     '[{"identifier": "position", "name": "触摸位置", "dataType": "enum", "specs": {"values": ["head", "back", "belly"]}},
+     '[{"identifier": "position", "name": "触摸位置", "dataType": "enum", "specs": {"values": [{"value": "head", "name": "头部"}, {"value": "back", "name": "背部"}, {"value": "belly", "name": "腹部"}]}},
        {"identifier": "duration", "name": "触摸时长", "dataType": "int", "specs": {"unit": "ms"}}]',
      '设备检测到触摸', 2),
     (v_product_id, 'lowBattery', '低电量告警', 'alert',
@@ -150,8 +150,8 @@ BEGIN
        {"identifier": "confidence", "name": "置信度", "dataType": "float", "specs": {"min": 0, "max": 1.0}}]',
      '语音唤醒触发', 5),
     (v_product_id, 'buttonPress', '按键事件', 'info',
-     '[{"identifier": "button", "name": "按键", "dataType": "enum", "specs": {"values": ["power", "mode", "volume_up", "volume_down"]}},
-       {"identifier": "pressType", "name": "按压类型", "dataType": "enum", "specs": {"values": ["short", "long", "double"]}}]',
+     '[{"identifier": "button", "name": "按键", "dataType": "enum", "specs": {"values": [{"value": "power", "name": "电源键"}, {"value": "mode", "name": "模式键"}, {"value": "volume_up", "name": "音量+"}, {"value": "volume_down", "name": "音量-"}]}},
+       {"identifier": "pressType", "name": "按压类型", "dataType": "enum", "specs": {"values": [{"value": "short", "name": "短按"}, {"value": "long", "name": "长按"}, {"value": "double", "name": "双击"}]}}]',
      '物理按键被按下', 6);
 
 END $$;

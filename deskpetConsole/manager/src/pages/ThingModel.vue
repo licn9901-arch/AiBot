@@ -21,11 +21,18 @@
           </div>
           <el-table :data="model?.properties || []" style="width: 100%">
             <el-table-column prop="identifier" label="标识" width="140" />
-            <el-table-column prop="name" label="名称" width="140" />
-            <el-table-column prop="dataType" label="数据类型" width="100" />
-            <el-table-column prop="accessMode" label="访问模式" width="100">
+            <el-table-column prop="name" label="名称" width="120" />
+            <el-table-column prop="dataType" label="数据类型" width="90" />
+            <el-table-column label="规格" min-width="180">
               <template #default="{ row }">
-                {{ row.accessMode || 'rw' }}
+                <SpecsDisplay :specs="row.specs" :data-type="row.dataType" />
+              </template>
+            </el-table-column>
+            <el-table-column label="访问模式" width="90">
+              <template #default="{ row }">
+                <el-tag :type="(row.accessMode || 'rw') === 'rw' ? '' : 'info'" size="small">
+                  {{ (row.accessMode || 'rw') === 'rw' ? '读写' : '只读' }}
+                </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="必需" width="70">
@@ -55,7 +62,21 @@
           <div class="tab-toolbar">
             <el-button type="primary" size="small" @click="openServiceDialog()">添加服务</el-button>
           </div>
-          <el-table :data="model?.services || []" style="width: 100%">
+          <el-table :data="model?.services || []" style="width: 100%" row-key="id">
+            <el-table-column type="expand">
+              <template #default="{ row }">
+                <div class="expand-content">
+                  <div class="expand-section">
+                    <div class="expand-label">输入参数</div>
+                    <ParamTableReadonly :params="row.inputParams" />
+                  </div>
+                  <div class="expand-section">
+                    <div class="expand-label">输出参数</div>
+                    <ParamTableReadonly :params="row.outputParams" />
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="identifier" label="标识" width="140" />
             <el-table-column prop="name" label="名称" width="140" />
             <el-table-column prop="callType" label="调用类型" width="100">
@@ -63,14 +84,14 @@
                 {{ row.callType || 'async' }}
               </template>
             </el-table-column>
-            <el-table-column label="输入参数数" width="110">
+            <el-table-column label="输入参数" min-width="160">
               <template #default="{ row }">
-                {{ row.inputParams?.length || 0 }}
+                {{ formatParamsSummary(row.inputParams) }}
               </template>
             </el-table-column>
-            <el-table-column label="输出参数数" width="110">
+            <el-table-column label="输出参数" min-width="160">
               <template #default="{ row }">
-                {{ row.outputParams?.length || 0 }}
+                {{ formatParamsSummary(row.outputParams) }}
               </template>
             </el-table-column>
             <el-table-column prop="description" label="描述" show-overflow-tooltip>
@@ -92,13 +113,23 @@
           <div class="tab-toolbar">
             <el-button type="primary" size="small" @click="openEventDialog()">添加事件</el-button>
           </div>
-          <el-table :data="model?.events || []" style="width: 100%">
+          <el-table :data="model?.events || []" style="width: 100%" row-key="id">
+            <el-table-column type="expand">
+              <template #default="{ row }">
+                <div class="expand-content">
+                  <div class="expand-section">
+                    <div class="expand-label">输出参数</div>
+                    <ParamTableReadonly :params="row.outputParams" />
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="identifier" label="标识" width="140" />
             <el-table-column prop="name" label="名称" width="140" />
             <el-table-column prop="eventType" label="事件类型" width="100" />
-            <el-table-column label="输出参数数" width="110">
+            <el-table-column label="输出参数" min-width="180">
               <template #default="{ row }">
-                {{ row.outputParams?.length || 0 }}
+                {{ formatParamsSummary(row.outputParams) }}
               </template>
             </el-table-column>
             <el-table-column prop="description" label="描述" show-overflow-tooltip>
@@ -118,7 +149,7 @@
     </div>
 
     <!-- 属性编辑弹窗 -->
-    <el-dialog v-model="showPropertyDialog" :title="editingPropertyId ? '编辑属性' : '添加属性'" width="560px">
+    <el-dialog v-model="showPropertyDialog" :title="editingPropertyId ? '编辑属性' : '添加属性'" class="adaptive-dialog">
       <el-form :model="propertyForm" label-width="80px">
         <el-form-item label="标识" required>
           <el-input v-model="propertyForm.identifier" placeholder="如 temperature" />
@@ -128,23 +159,16 @@
         </el-form-item>
         <el-form-item label="数据类型" required>
           <el-select v-model="propertyForm.dataType" style="width: 100%">
-            <el-option label="int" value="int" />
-            <el-option label="float" value="float" />
-            <el-option label="double" value="double" />
-            <el-option label="bool" value="bool" />
-            <el-option label="string" value="string" />
-            <el-option label="enum" value="enum" />
-            <el-option label="struct" value="struct" />
-            <el-option label="array" value="array" />
+            <el-option
+              v-for="opt in DATA_TYPE_OPTIONS"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="规格">
-          <el-input
-            v-model="propertyForm.specsJson"
-            type="textarea"
-            :rows="3"
-            placeholder='JSON 格式，如 {"min":0,"max":100,"unit":"℃"}'
-          />
+          <SpecsEditor v-model="propertyForm.specs" :data-type="propertyForm.dataType" />
         </el-form-item>
         <el-form-item label="访问模式">
           <el-select v-model="propertyForm.accessMode" style="width: 100%">
@@ -169,7 +193,7 @@
     </el-dialog>
 
     <!-- 服务编辑弹窗 -->
-    <el-dialog v-model="showServiceDialog" :title="editingServiceId ? '编辑服务' : '添加服务'" width="560px">
+    <el-dialog v-model="showServiceDialog" :title="editingServiceId ? '编辑服务' : '添加服务'" class="adaptive-dialog">
       <el-form :model="serviceForm" label-width="80px">
         <el-form-item label="标识" required>
           <el-input v-model="serviceForm.identifier" placeholder="如 setTemperature" />
@@ -184,20 +208,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="输入参数">
-          <el-input
-            v-model="serviceForm.inputParamsJson"
-            type="textarea"
-            :rows="4"
-            placeholder='JSON 数组，如 [{"name":"target","type":"int"}]'
-          />
+          <ParamTable v-model="serviceForm.inputParams" />
         </el-form-item>
         <el-form-item label="输出参数">
-          <el-input
-            v-model="serviceForm.outputParamsJson"
-            type="textarea"
-            :rows="4"
-            placeholder='JSON 数组，如 [{"name":"result","type":"bool"}]'
-          />
+          <ParamTable v-model="serviceForm.outputParams" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="serviceForm.description" type="textarea" :rows="2" />
@@ -213,7 +227,7 @@
     </el-dialog>
 
     <!-- 事件编辑弹窗 -->
-    <el-dialog v-model="showEventDialog" :title="editingEventId ? '编辑事件' : '添加事件'" width="560px">
+    <el-dialog v-model="showEventDialog" :title="editingEventId ? '编辑事件' : '添加事件'" class="adaptive-dialog">
       <el-form :model="eventForm" label-width="80px">
         <el-form-item label="标识" required>
           <el-input v-model="eventForm.identifier" placeholder="如 temperatureAlarm" />
@@ -229,12 +243,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="输出参数">
-          <el-input
-            v-model="eventForm.outputParamsJson"
-            type="textarea"
-            :rows="4"
-            placeholder='JSON 数组，如 [{"name":"value","type":"float"}]'
-          />
+          <ParamTable v-model="eventForm.outputParams" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="eventForm.description" type="textarea" :rows="2" />
@@ -266,6 +275,11 @@ import {
   exportThingModel, importThingModel
 } from '@/api/product'
 import type { ThingModelDTO, PropertyDTO, ServiceDTO, EventDTO } from '@/types/product'
+import { DATA_TYPE_OPTIONS } from '@/types/product'
+import SpecsDisplay from '@/components/thing-model/SpecsDisplay.vue'
+import SpecsEditor from '@/components/thing-model/SpecsEditor.vue'
+import ParamTableReadonly from '@/components/thing-model/ParamTableReadonly.vue'
+import ParamTable from '@/components/thing-model/ParamTable.vue'
 
 const route = useRoute()
 const productKey = route.params.productKey as string
@@ -284,7 +298,7 @@ const propertyForm = reactive({
   identifier: '',
   name: '',
   dataType: 'int',
-  specsJson: '',
+  specs: null as Record<string, any> | null,
   accessMode: 'rw',
   required: false,
   description: '',
@@ -297,7 +311,7 @@ function openPropertyDialog(row?: PropertyDTO) {
     propertyForm.identifier = row.identifier
     propertyForm.name = row.name
     propertyForm.dataType = row.dataType
-    propertyForm.specsJson = row.specs ? JSON.stringify(row.specs, null, 2) : ''
+    propertyForm.specs = row.specs ? { ...row.specs } : null
     propertyForm.accessMode = row.accessMode || 'rw'
     propertyForm.required = row.required
     propertyForm.description = row.description || ''
@@ -307,7 +321,7 @@ function openPropertyDialog(row?: PropertyDTO) {
     propertyForm.identifier = ''
     propertyForm.name = ''
     propertyForm.dataType = 'int'
-    propertyForm.specsJson = ''
+    propertyForm.specs = null
     propertyForm.accessMode = 'rw'
     propertyForm.required = false
     propertyForm.description = ''
@@ -321,22 +335,13 @@ async function handleSubmitProperty() {
     ElMessage.warning('请填写标识和名称')
     return
   }
-  let specs: Record<string, any> | undefined
-  if (propertyForm.specsJson.trim()) {
-    try {
-      specs = JSON.parse(propertyForm.specsJson)
-    } catch {
-      ElMessage.error('规格 JSON 格式不正确')
-      return
-    }
-  }
   submitting.value = true
   try {
     const data = {
       identifier: propertyForm.identifier,
       name: propertyForm.name,
       dataType: propertyForm.dataType,
-      specs,
+      specs: propertyForm.specs || undefined,
       accessMode: propertyForm.accessMode,
       required: propertyForm.required,
       description: propertyForm.description || undefined,
@@ -377,8 +382,8 @@ const serviceForm = reactive({
   identifier: '',
   name: '',
   callType: 'async',
-  inputParamsJson: '',
-  outputParamsJson: '',
+  inputParams: null as Record<string, any>[] | null,
+  outputParams: null as Record<string, any>[] | null,
   description: '',
   sortOrder: 0
 })
@@ -389,8 +394,8 @@ function openServiceDialog(row?: ServiceDTO) {
     serviceForm.identifier = row.identifier
     serviceForm.name = row.name
     serviceForm.callType = row.callType || 'async'
-    serviceForm.inputParamsJson = row.inputParams ? JSON.stringify(row.inputParams, null, 2) : ''
-    serviceForm.outputParamsJson = row.outputParams ? JSON.stringify(row.outputParams, null, 2) : ''
+    serviceForm.inputParams = row.inputParams ? [...row.inputParams] : null
+    serviceForm.outputParams = row.outputParams ? [...row.outputParams] : null
     serviceForm.description = row.description || ''
     serviceForm.sortOrder = row.sortOrder
   } else {
@@ -398,38 +403,17 @@ function openServiceDialog(row?: ServiceDTO) {
     serviceForm.identifier = ''
     serviceForm.name = ''
     serviceForm.callType = 'async'
-    serviceForm.inputParamsJson = ''
-    serviceForm.outputParamsJson = ''
+    serviceForm.inputParams = null
+    serviceForm.outputParams = null
     serviceForm.description = ''
     serviceForm.sortOrder = 0
   }
   showServiceDialog.value = true
 }
 
-function parseJsonArray(str: string): Record<string, any>[] | undefined {
-  if (!str.trim()) return undefined
-  const parsed = JSON.parse(str)
-  if (!Array.isArray(parsed)) throw new Error('Must be a JSON array')
-  return parsed
-}
-
 async function handleSubmitService() {
   if (!serviceForm.identifier.trim() || !serviceForm.name.trim()) {
     ElMessage.warning('请填写标识和名称')
-    return
-  }
-  let inputParams: Record<string, any>[] | undefined
-  let outputParams: Record<string, any>[] | undefined
-  try {
-    inputParams = parseJsonArray(serviceForm.inputParamsJson)
-  } catch {
-    ElMessage.error('输入参数 JSON 格式不正确，需要数组格式')
-    return
-  }
-  try {
-    outputParams = parseJsonArray(serviceForm.outputParamsJson)
-  } catch {
-    ElMessage.error('输出参数 JSON 格式不正确，需要数组格式')
     return
   }
   submitting.value = true
@@ -438,8 +422,8 @@ async function handleSubmitService() {
       identifier: serviceForm.identifier,
       name: serviceForm.name,
       callType: serviceForm.callType,
-      inputParams,
-      outputParams,
+      inputParams: serviceForm.inputParams || undefined,
+      outputParams: serviceForm.outputParams || undefined,
       description: serviceForm.description || undefined,
       sortOrder: serviceForm.sortOrder
     }
@@ -478,7 +462,7 @@ const eventForm = reactive({
   identifier: '',
   name: '',
   eventType: 'info',
-  outputParamsJson: '',
+  outputParams: null as Record<string, any>[] | null,
   description: '',
   sortOrder: 0
 })
@@ -489,7 +473,7 @@ function openEventDialog(row?: EventDTO) {
     eventForm.identifier = row.identifier
     eventForm.name = row.name
     eventForm.eventType = row.eventType
-    eventForm.outputParamsJson = row.outputParams ? JSON.stringify(row.outputParams, null, 2) : ''
+    eventForm.outputParams = row.outputParams ? [...row.outputParams] : null
     eventForm.description = row.description || ''
     eventForm.sortOrder = row.sortOrder
   } else {
@@ -497,7 +481,7 @@ function openEventDialog(row?: EventDTO) {
     eventForm.identifier = ''
     eventForm.name = ''
     eventForm.eventType = 'info'
-    eventForm.outputParamsJson = ''
+    eventForm.outputParams = null
     eventForm.description = ''
     eventForm.sortOrder = 0
   }
@@ -509,20 +493,13 @@ async function handleSubmitEvent() {
     ElMessage.warning('请填写标识和名称')
     return
   }
-  let outputParams: Record<string, any>[] | undefined
-  try {
-    outputParams = parseJsonArray(eventForm.outputParamsJson)
-  } catch {
-    ElMessage.error('输出参数 JSON 格式不正确，需要数组格式')
-    return
-  }
   submitting.value = true
   try {
     const data = {
       identifier: eventForm.identifier,
       name: eventForm.name,
       eventType: eventForm.eventType,
-      outputParams,
+      outputParams: eventForm.outputParams || undefined,
       description: eventForm.description || undefined,
       sortOrder: eventForm.sortOrder
     }
@@ -601,6 +578,14 @@ async function onFileSelected(e: Event) {
   }
 }
 
+// ==================== 辅助函数 ====================
+
+function formatParamsSummary(params: Record<string, any>[] | null): string {
+  if (!params || params.length === 0) return '-'
+  const names = params.map(p => p.identifier || p.name).filter(Boolean)
+  return `${params.length} 个参数 (${names.join(', ')})`
+}
+
 // ==================== 加载数据 ====================
 
 async function loadData() {
@@ -620,5 +605,32 @@ loadData()
 <style scoped>
 .tab-toolbar {
   margin-bottom: 16px;
+}
+.expand-content {
+  padding: 12px 20px;
+}
+.expand-section {
+  margin-bottom: 12px;
+}
+.expand-section:last-child {
+  margin-bottom: 0;
+}
+.expand-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  margin-bottom: 6px;
+}
+</style>
+
+<style>
+/* 自适应弹窗：非 scoped，因为 el-dialog 挂载到 body */
+.adaptive-dialog {
+  width: auto !important;
+  min-width: 560px;
+  max-width: 90vw;
+}
+.adaptive-dialog .el-dialog__body {
+  overflow-x: auto;
 }
 </style>

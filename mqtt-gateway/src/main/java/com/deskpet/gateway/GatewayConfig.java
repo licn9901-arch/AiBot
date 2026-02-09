@@ -26,7 +26,9 @@ public record GatewayConfig(
         int callbackRetryDelayMs,
         boolean metricsEnabled,
         String metricsPath,
-        int statsLogIntervalSec
+        int statsLogIntervalSec,
+        int heartbeatIntervalSec,
+        int heartbeatTimeoutSec
 ) {
     public static Future<GatewayConfig> load(Vertx vertx) {
         ConfigStoreOptions store = new ConfigStoreOptions()
@@ -69,10 +71,14 @@ public record GatewayConfig(
         String metricsPath = metrics.getString("path", "/metrics");
         JsonObject stats = config.getJsonObject("stats", new JsonObject());
         int statsLogIntervalSec = stats.getInteger("logIntervalSec", 60);
+        JsonObject heartbeat = config.getJsonObject("heartbeat", new JsonObject());
+        int heartbeatIntervalSec = heartbeat.getInteger("intervalSec", 30);
+        int heartbeatTimeoutSec = heartbeat.getInteger("timeoutSec", 120);
         return new GatewayConfig(mqttPort, internalPort, coreInternalBaseUrl, instanceId, internalToken,
                 authTimeoutMs, authMaxRetries, authRetryDelayMs, authFailOpen,
                 callbackTimeoutMs, callbackMaxRetries, callbackRetryDelayMs,
-                metricsEnabled, metricsPath, statsLogIntervalSec);
+                metricsEnabled, metricsPath, statsLogIntervalSec,
+                heartbeatIntervalSec, heartbeatTimeoutSec);
     }
 
     private static String resolveConfigPath() {

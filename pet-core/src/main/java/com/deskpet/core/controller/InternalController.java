@@ -10,6 +10,7 @@ import com.deskpet.core.service.DeviceEventService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.TelemetryService;
 import io.swagger.v3.oas.annotations.Hidden;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,9 +20,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/internal")
 @Hidden
+@Slf4j
 public class InternalController {
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
@@ -81,6 +85,14 @@ public class InternalController {
     public ResponseEntity<Void> event(@PathVariable String deviceId,
                                                      @RequestBody DeviceEventRequest request) {
         deviceEventService.recordEvent(deviceId, request);
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/gateway/cleanup")
+    public ResponseEntity<Void> gatewayCleanup(@RequestBody Map<String, String> request) {
+        String gatewayInstanceId = request.get("gatewayInstanceId");
+        log.info("Gateway cleanup request: instanceId={}", gatewayInstanceId);
+        deviceService.markAllOfflineByGateway(gatewayInstanceId);
         return ResponseEntity.accepted().build();
     }
 }

@@ -22,6 +22,7 @@ import io.vertx.mqtt.MqttServerOptions;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -88,6 +89,8 @@ public class MqttServerVerticle extends AbstractVerticle {
                 .listen(ar -> {
                     if (ar.succeeded()) {
                         log.info("MQTT server started: port={} deploymentId={}", config.mqttPort(), deploymentID());
+                        startHeartbeatChecker();
+                        cleanupStaleSessionsOnStartup();
                         startPromise.complete();
                     } else {
                         startPromise.fail(ar.cause());
@@ -149,12 +152,23 @@ public class MqttServerVerticle extends AbstractVerticle {
 
         endpoint.publishHandler(message -> handlePublish(deviceId, message));
 
+        endpoint.pingHandler(v -> {
+            EndpointSession session = sessions.get(deviceId);
+            if (session != null) {
+                session.updateActivity();
+            }
+        });
+
         endpoint.disconnectHandler(v -> handleDisconnect(deviceId));
 
         endpoint.closeHandler(v -> handleDisconnect(deviceId));
     }
 
     private void handlePublish(String deviceId, MqttPublishMessage message) {
+        EndpointSession session = sessions.get(deviceId);
+        if (session != null) {
+            session.updateActivity();
+        }
         String topic = message.topicName();
         if (!isValidPublish(deviceId, topic)) {
             log.warn("Publish denied: deviceId={} topic={}", deviceId, topic);
@@ -199,9 +213,9 @@ public class MqttServerVerticle extends AbstractVerticle {
                         log.warn("Callback failed: deviceId={} topic={} status={}", deviceId, topic, statusOf(ar));
                     }
                     if (message.qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                        EndpointSession session = sessions.get(deviceId);
-                        if (session != null) {
-                            session.endpoint().publishAcknowledge(message.messageId());
+                        EndpointSession sessionRe = sessions.get(deviceId);
+                        if (sessionRe != null) {
+                            sessionRe.endpoint().publishAcknowledge(message.messageId());
                         }
                     }
                 });
@@ -283,6 +297,44 @@ public class MqttServerVerticle extends AbstractVerticle {
         metrics.onDisconnect();
         log.info("Device disconnected: deviceId={} ip={} online={}", deviceId, ip, metrics.onlineCount());
         notifyPresence(deviceId, ip, false);
+    }
+
+    private void startHeartbeatChecker() {
+        int intervalSec = config.heartbeatIntervalSec();
+        int timeoutSec = config.heartbeatTimeoutSec();
+        if (intervalSec <= 0 || timeoutSec <= 0) {
+            log.info("[Heartbeat] 心跳检测已禁用: intervalSec={}, timeoutSec={}", intervalSec, timeoutSec);
+            return;
+        }
+        log.info("[Heartbeat] 启动心跳检测: intervalSec={}, timeoutSec={}", intervalSec, timeoutSec);
+        vertx.setPeriodic(intervalSec * 1000L, id -> {
+            Instant now = Instant.now();
+            for (EndpointSession session : sessions.values()) {
+                long idleSec = Duration.between(session.lastActivity(), now).getSeconds();
+                if (idleSec > timeoutSec) {
+                    log.warn("[Heartbeat] 心跳超时，强制断开: deviceId={}, idle={}s", session.deviceId(), idleSec);
+                    session.endpoint().close();
+                }
+            }
+        });
+    }
+
+    private void cleanupStaleSessionsOnStartup() {
+        String url = config.coreInternalBaseUrl() + "/internal/gateway/cleanup";
+        JsonObject body = new JsonObject().put("gatewayInstanceId", config.instanceId());
+        HttpRequest<Buffer> request = webClient.postAbs(url);
+        if (!config.internalToken().isBlank()) {
+            request.putHeader(HEADER_INTERNAL_TOKEN, config.internalToken());
+        }
+        request.putHeader("Content-Type", "application/json");
+        request.sendJsonObject(body, ar -> {
+            if (ar.succeeded() && ar.result().statusCode() < 400) {
+                log.info("[Cleanup] 网关启动清理成功: instanceId={}", config.instanceId());
+            } else {
+                log.warn("[Cleanup] 网关启动清理失败: instanceId={}, status={}",
+                        config.instanceId(), statusOf(ar));
+            }
+        });
     }
 
     private void scheduleStatsLog(Vertx vertx) {

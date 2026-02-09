@@ -94,7 +94,7 @@ public class DeviceController {
     @Operation(summary = "遥测历史", description = "查询最近 N 小时的遥测数据（从 TimescaleDB）")
     public List<Map<String, Object>> getTelemetryHistory(
             @PathVariable String deviceId,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(value = "hours", defaultValue = "24") int hours) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -114,11 +114,11 @@ public class DeviceController {
     @Operation(summary = "设备事件历史", description = "查询设备上报的事件（从 TimescaleDB）")
     public Map<String, Object> getDeviceEvents(
             @PathVariable String deviceId,
-            @RequestParam(required = false) String eventType,
-            @RequestParam(required = false) Instant startTime,
-            @RequestParam(required = false) Instant endTime,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(value = "eventType", required = false) String eventType,
+            @RequestParam(value = "startTime", required = false) Instant startTime,
+            @RequestParam(value = "endTime", required = false) Instant endTime,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -147,7 +147,7 @@ public class DeviceController {
     @Operation(summary = "设备事件统计", description = "统计设备事件数量（从 TimescaleDB）")
     public Map<String, Object> getDeviceEventStats(
             @PathVariable String deviceId,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(value = "hours", defaultValue = "24") int hours) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -182,7 +182,7 @@ public class DeviceController {
     @Operation(summary = "设备上下线历史", description = "查询设备上下线记录（需启用 TimescaleDB）")
     public List<Map<String, Object>> getDeviceSessionHistory(
             @PathVariable String deviceId,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(value = "hours", defaultValue = "24") int hours) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -202,7 +202,7 @@ public class DeviceController {
     @Operation(summary = "设备上下线统计", description = "统计设备上下线次数（需启用 TimescaleDB）")
     public Map<String, Object> getDeviceSessionStats(
             @PathVariable String deviceId,
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(value = "hours", defaultValue = "24") int hours) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();

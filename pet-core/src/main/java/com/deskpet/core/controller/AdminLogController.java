@@ -30,13 +30,13 @@ public class AdminLogController {
     @SaCheckPermission("log:list")
     @Operation(summary = "操作日志列表", description = "从 TimescaleDB 查询操作日志，支持按用户、设备、操作类型、时间范围筛选")
     public Map<String, Object> list(
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) String deviceId,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "deviceId", required = false) String deviceId,
+            @RequestParam(value = "action", required = false) String action,
+            @RequestParam(value = "startTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startTime,
+            @RequestParam(value = "endTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endTime,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         if (timeSeriesService == null) {
             return Map.of(
                 "content", List.of(),
@@ -63,12 +63,12 @@ public class AdminLogController {
     @SaCheckPermission("log:list")
     @Operation(summary = "应用日志查询", description = "从 TimescaleDB 查询应用日志，需启用 TimescaleDB")
     public Map<String, Object> appLogs(
-            @RequestParam(required = false) String level,
-            @RequestParam(required = false) String logger,
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "24") int hours,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(value = "level", required = false) String level,
+            @RequestParam(value = "logger", required = false) String logger,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "hours", defaultValue = "24") int hours,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         if (timeSeriesService == null) {
             return Map.of(
                 "content", List.of(),
@@ -96,7 +96,7 @@ public class AdminLogController {
     @SaCheckPermission("log:list")
     @Operation(summary = "应用日志统计", description = "按级别分组统计应用日志数量")
     public Map<String, Object> appLogStats(
-            @RequestParam(defaultValue = "24") int hours) {
+            @RequestParam(value = "hours", defaultValue = "24") int hours) {
         if (timeSeriesService == null) {
             return Map.of("message", "TimescaleDB 未启用");
         }
@@ -114,11 +114,11 @@ public class AdminLogController {
     @SaCheckPermission("log:list")
     @Operation(summary = "设备事件日志", description = "从 TimescaleDB 查询设备事件")
     public Map<String, Object> deviceEvents(
-            @RequestParam(required = false) String deviceId,
-            @RequestParam(required = false) String eventType,
-            @RequestParam(defaultValue = "24") int hours,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(value = "deviceId", required = false) String deviceId,
+            @RequestParam(value = "eventType", required = false) String eventType,
+            @RequestParam(value = "hours", defaultValue = "24") int hours,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         if (timeSeriesService == null) {
             return Map.of(
                 "content", List.of(),

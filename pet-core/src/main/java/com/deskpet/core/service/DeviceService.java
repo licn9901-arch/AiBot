@@ -13,6 +13,7 @@ import com.deskpet.core.repository.DeviceSessionRepository;
 import com.deskpet.core.repository.TelemetryLatestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -20,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class DeviceService {
     private final DeviceRepository deviceRepository;
@@ -136,5 +138,18 @@ public class DeviceService {
                 findTelemetry(device.deviceId()).orElse(null)
             ))
             .toList();
+    }
+
+    /**
+     * 网关启动时清理：将指定网关实例下所有残留在线设备标记为离线
+     */
+    public void markAllOfflineByGateway(String gatewayInstanceId) {
+        List<DeviceSession> sessions = sessionRepository
+                .findByGatewayInstanceIdAndOnlineTrue(gatewayInstanceId);
+        for (DeviceSession s : sessions) {
+            markOffline(s.deviceId(), gatewayInstanceId, s.ip());
+        }
+        log.info("Gateway cleanup: instanceId={}, offlined={} devices",
+                gatewayInstanceId, sessions.size());
     }
 }

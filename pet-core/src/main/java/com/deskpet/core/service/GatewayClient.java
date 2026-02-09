@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -53,5 +55,47 @@ public class GatewayClient {
             }
             throw ex;
         }
+    }
+
+    /**
+     * 从网关获取 Prometheus 格式的 metrics 文本，解析为 Map
+     */
+    public Map<String, Object> fetchMetrics() {
+        String url = gatewayBaseUrl + "/metrics";
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            String body = response.getBody();
+            if (body == null || body.isBlank()) {
+                return Map.of();
+            }
+            return parsePrometheusText(body);
+        } catch (Exception ex) {
+            log.warn("[GW] 获取网关 metrics 失败: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    private Map<String, Object> parsePrometheusText(String text) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        for (String line : text.split("\n")) {
+            if (line.startsWith("#") || line.isBlank()) {
+                continue;
+            }
+            String[] parts = line.split("\\s+", 2);
+            if (parts.length == 2) {
+                String key = parts[0];
+                String val = parts[1];
+                try {
+                    if (val.contains(".")) {
+                        result.put(key, Double.parseDouble(val));
+                    } else {
+                        result.put(key, Long.parseLong(val));
+                    }
+                } catch (NumberFormatException e) {
+                    result.put(key, val);
+                }
+            }
+        }
+        return result;
     }
 }

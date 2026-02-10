@@ -39,7 +39,7 @@ public class CommandController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     @SaCheckPermission("device:control")
     @Operation(summary = "创建指令", description = "下发指令到指定设备")
-    public CommandResponse createCommand(@PathVariable String deviceId,
+    public CommandResponse createCommand(@PathVariable("deviceId") String deviceId,
                                          @Valid @RequestBody CommandCreateRequest request) {
         // 非管理员需校验设备归属
         long userId = StpUtil.getLoginIdAsLong();
@@ -60,8 +60,8 @@ public class CommandController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     @SaCheckPermission("device:control")
     @Operation(summary = "重试指令", description = "仅 TIMEOUT/FAILED 状态允许重试")
-    public CommandResponse retryCommand(@PathVariable String deviceId,
-                                        @PathVariable String reqId) {
+    public CommandResponse retryCommand(@PathVariable("deviceId") String deviceId,
+                                        @PathVariable("reqId") String reqId) {
         // 非管理员需校验设备归属
         long userId = StpUtil.getLoginIdAsLong();
         if (!StpUtil.hasRole("ADMIN") && !licenseCodeService.hasDevice(userId, deviceId)) {
@@ -80,8 +80,8 @@ public class CommandController {
     @GetMapping("/{reqId}")
     @SaCheckPermission("device:view")
     @Operation(summary = "查询指令", description = "查询指令状态与回执信息")
-    public CommandResponse getCommand(@PathVariable String deviceId,
-                                      @PathVariable String reqId) {
+    public CommandResponse getCommand(@PathVariable("deviceId") String deviceId,
+                                      @PathVariable("reqId") String reqId) {
         // 非管理员需校验设备归属
         if (!StpUtil.hasRole("ADMIN")) {
             long userId = StpUtil.getLoginIdAsLong();

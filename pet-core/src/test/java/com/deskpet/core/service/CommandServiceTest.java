@@ -98,6 +98,6 @@ class CommandServiceTest {
     }
 
     private Device mockDevice(String deviceId) {
-        return new Device(deviceId, "hash", "salt", "model", null, "remark", Instant.now());
+        return new Device(deviceId, "hash", "salt", "model", null, 1L,"remark", Instant.now());
     }
 }

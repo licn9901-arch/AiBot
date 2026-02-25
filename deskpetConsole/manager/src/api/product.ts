@@ -40,11 +40,11 @@ export function addProperty(productKey: string, data: PropertyCreateRequest): Pr
     return service.post(`api/admin/products/${productKey}/properties`, data)
 }
 
-export function updateProperty(productKey: string, propertyId: number, data: PropertyCreateRequest): Promise<PropertyDTO> {
+export function updateProperty(productKey: string, propertyId: string, data: PropertyCreateRequest): Promise<PropertyDTO> {
     return service.put(`api/admin/products/${productKey}/properties/${propertyId}`, data)
 }
 
-export function deleteProperty(productKey: string, propertyId: number): Promise<void> {
+export function deleteProperty(productKey: string, propertyId: string): Promise<void> {
     return service.delete(`api/admin/products/${productKey}/properties/${propertyId}`)
 }
 
@@ -54,11 +54,11 @@ export function addService(productKey: string, data: ServiceCreateRequest): Prom
     return service.post(`api/admin/products/${productKey}/services`, data)
 }
 
-export function updateService(productKey: string, serviceId: number, data: ServiceCreateRequest): Promise<ServiceDTO> {
+export function updateService(productKey: string, serviceId: string, data: ServiceCreateRequest): Promise<ServiceDTO> {
     return service.put(`api/admin/products/${productKey}/services/${serviceId}`, data)
 }
 
-export function deleteService(productKey: string, serviceId: number): Promise<void> {
+export function deleteService(productKey: string, serviceId: string): Promise<void> {
     return service.delete(`api/admin/products/${productKey}/services/${serviceId}`)
 }
 
@@ -68,11 +68,11 @@ export function addEvent(productKey: string, data: EventCreateRequest): Promise<
     return service.post(`api/admin/products/${productKey}/events`, data)
 }
 
-export function updateEvent(productKey: string, eventId: number, data: EventCreateRequest): Promise<EventDTO> {
+export function updateEvent(productKey: string, eventId: string, data: EventCreateRequest): Promise<EventDTO> {
     return service.put(`api/admin/products/${productKey}/events/${eventId}`, data)
 }
 
-export function deleteEvent(productKey: string, eventId: number): Promise<void> {
+export function deleteEvent(productKey: string, eventId: string): Promise<void> {
     return service.delete(`api/admin/products/${productKey}/events/${eventId}`)
 }
 

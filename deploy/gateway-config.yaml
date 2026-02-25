@@ -1,0 +1,26 @@
+mqtt:
+  port: 1883
+internal:
+  port: 8081
+  token: ""
+core:
+  internalBaseUrl: "http://pet-core:8080"
+gateway:
+  instanceId: "gateway-1"
+auth:
+  timeoutMs: 2000
+  maxRetries: 1
+  retryDelayMs: 200
+  failOpen: false
+callback:
+  timeoutMs: 2000
+  maxRetries: 1
+  retryDelayMs: 200
+metrics:
+  enabled: true
+  path: "/metrics"
+stats:
+  logIntervalSec: 60
+heartbeat:
+  intervalSec: 30
+  timeoutSec: 120

@@ -263,16 +263,19 @@ public class MqttServerVerticle extends AbstractVerticle {
         log.info("[MQTT] 路由注册: deviceId={}, address={}, 路由表大小={}", deviceId, commandAddress, routing.size());
     }
 
-    private void clearRoute(String deviceId) {
+    private boolean clearRoute(String deviceId) {
         LocalMap<String, String> routing = vertx.sharedData().getLocalMap(GatewayApplication.ROUTE_MAP_NAME);
         String owner = routing.get(deviceId);
         if (commandAddress.equals(owner)) {
             routing.remove(deviceId);
             log.info("[MQTT] 路由移除: deviceId={}, 路由表大小={}", deviceId, routing.size());
+            metrics.setOnlineCount(routing.size());
+            return true;
         } else {
             log.warn("[MQTT] 路由移除跳过(非本 Verticle 拥有): deviceId={}, owner={}, mine={}", deviceId, owner, commandAddress);
+            metrics.setOnlineCount(routing.size());
+            return false;
         }
-        metrics.setOnlineCount(routing.size());
     }
 
     private void acceptEndpoint(MqttEndpoint endpoint, String deviceId) {
@@ -293,10 +296,14 @@ public class MqttServerVerticle extends AbstractVerticle {
             return;
         }
         String ip = session.clientIp();
-        clearRoute(deviceId);
+        boolean removed = clearRoute(deviceId);
         metrics.onDisconnect();
-        log.info("Device disconnected: deviceId={} ip={} online={}", deviceId, ip, metrics.onlineCount());
-        notifyPresence(deviceId, ip, false);
+        if (removed) {
+            log.info("Device disconnected: deviceId={} ip={} online={}", deviceId, ip, metrics.onlineCount());
+            notifyPresence(deviceId, ip, false);
+        } else {
+            log.info("Device old connection closed, skip offline notify: deviceId={} ip={}", deviceId, ip);
+        }
     }
 
     private void startHeartbeatChecker() {

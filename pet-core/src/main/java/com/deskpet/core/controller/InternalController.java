@@ -1,9 +1,6 @@
 package com.deskpet.core.controller;
 
-import com.deskpet.core.dto.AckRequest;
-import com.deskpet.core.dto.DeviceEventRequest;
-import com.deskpet.core.dto.GatewayPresenceRequest;
-import com.deskpet.core.dto.TelemetryRequest;
+import com.deskpet.core.dto.*;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.service.CommandService;
 import com.deskpet.core.service.DeviceEventService;
@@ -46,6 +43,7 @@ public class InternalController {
     public ResponseEntity<String> auth(@RequestParam String deviceId,
                                        @RequestParam String secret) {
         Device device = deviceService.find(deviceId).orElse(null);
+        log.info("Auth request: deviceId={}, secret={}", deviceId, secret);
         if (device == null) {
             return ResponseEntity.status(404).body("DEVICE_NOT_FOUND");
         }

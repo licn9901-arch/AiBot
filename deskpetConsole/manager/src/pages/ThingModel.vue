@@ -293,7 +293,7 @@ const fileInput = ref<HTMLInputElement>()
 // ==================== 属性 ====================
 
 const showPropertyDialog = ref(false)
-const editingPropertyId = ref<number | null>(null)
+const editingPropertyId = ref<string | null>(null)
 const propertyForm = reactive({
   identifier: '',
   name: '',
@@ -377,7 +377,7 @@ async function handleDeleteProperty(row: PropertyDTO) {
 // ==================== 服务 ====================
 
 const showServiceDialog = ref(false)
-const editingServiceId = ref<number | null>(null)
+const editingServiceId = ref<string | null>(null)
 const serviceForm = reactive({
   identifier: '',
   name: '',
@@ -457,7 +457,7 @@ async function handleDeleteService(row: ServiceDTO) {
 // ==================== 事件 ====================
 
 const showEventDialog = ref(false)
-const editingEventId = ref<number | null>(null)
+const editingEventId = ref<string | null>(null)
 const eventForm = reactive({
   identifier: '',
   name: '',

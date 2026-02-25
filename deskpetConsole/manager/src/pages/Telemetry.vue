@@ -10,9 +10,9 @@
         <el-select v-model="selectedDeviceId" placeholder="选择设备" style="width: 200px" @change="loadHistory">
           <el-option
             v-for="d in devices"
-            :key="d.device.deviceId"
-            :label="d.device.deviceId + (d.device.remark ? ` (${d.device.remark})` : '')"
-            :value="d.device.deviceId"
+            :key="d.deviceId"
+            :label="d.deviceId + (d.remark ? ` (${d.remark})` : '')"
+            :value="d.deviceId"
           />
         </el-select>
         <el-button @click="loadHistory" :disabled="!selectedDeviceId">刷新</el-button>
@@ -49,7 +49,7 @@ async function loadDevices() {
   try {
     devices.value = await getDevices()
     if (devices.value.length > 0) {
-      selectedDeviceId.value = devices.value[0]?.device.deviceId ?? ''
+      selectedDeviceId.value = devices.value[0]?.deviceId ?? ''
       await loadHistory()
       startPolling()
     }

@@ -102,7 +102,7 @@ function removeRow(index: number) {
 }
 
 function onDataTypeChange(index: number) {
-  list.value[index].specs = null
+  list.value[index]!.specs = null
   emitValue()
 }
 

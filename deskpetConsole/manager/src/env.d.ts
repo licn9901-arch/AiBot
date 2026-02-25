@@ -6,3 +6,8 @@ declare module '*.vue' {
     const component: DefineComponent<{}, {}, any>
     export default component
 }
+
+declare module 'sockjs-client/dist/sockjs.min.js' {
+    import SockJS from 'sockjs-client'
+    export default SockJS
+}

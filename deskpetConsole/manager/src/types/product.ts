@@ -3,6 +3,8 @@ export interface ProductResponse {
   productKey: string
   name: string
   description: string | null
+  icon: string | null
+  iconKey?: string | null
   status: string
   createdAt: string
   updatedAt: string | null
@@ -12,11 +14,13 @@ export interface ProductCreateRequest {
   productKey: string
   name: string
   description?: string
+  icon?: string
 }
 
 export interface ProductUpdateRequest {
   name?: string
   description?: string
+  icon?: string
   status?: string
 }
 
@@ -88,6 +92,8 @@ export interface ThingModelDTO {
   productKey: string
   productName: string
   description: string | null
+  icon: string | null
+  iconKey?: string | null
   status: string
   properties: PropertyDTO[]
   services: ServiceDTO[]

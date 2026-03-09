@@ -12,7 +12,7 @@ public record UserUpdateRequest(
     @Size(max = 20, message = "手机号长度不能超过20")
     String phone,
 
-    @Schema(description = "头像URL", example = "https://example.com/avatar.png")
-    @Size(max = 255, message = "头像URL长度不能超过255")
+    @Schema(description = "头像对象 key", example = "uploads/avatars/2026/03/11/avatar.png")
+    @Size(max = 255, message = "头像对象 key 长度不能超过255")
     String avatar
 ) {}

@@ -27,7 +27,7 @@ const navItems = [
       <div class="brand">
         <div class="brand-mark"></div>
         <div>
-          <div class="brand-title">DeskPet Console</div>
+          <div class="brand-title">Cubee Console</div>
           <div class="brand-subtitle">桌宠控制中心</div>
         </div>
       </div>

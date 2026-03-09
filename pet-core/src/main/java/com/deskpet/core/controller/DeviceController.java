@@ -7,8 +7,6 @@ import com.deskpet.core.dto.DeviceResponse;
 import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Device;
-import com.deskpet.core.model.DeviceSession;
-import com.deskpet.core.model.TelemetryLatest;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.LicenseCodeService;
 import com.deskpet.core.service.TimeSeriesService;
@@ -74,9 +72,7 @@ public class DeviceController {
 
         Device device = deviceService.find(deviceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
-        DeviceSession session = deviceService.findSession(deviceId).orElse(null);
-        TelemetryLatest telemetry = deviceService.findTelemetry(deviceId).orElse(null);
-        return DeviceResponse.of(device, session, telemetry);
+        return deviceService.toDeviceResponse(device);
     }
 
     @PostMapping
@@ -86,7 +82,7 @@ public class DeviceController {
     public DeviceResponse register(@Valid @RequestBody DeviceRegistrationRequest request) {
         long productId = Long.parseLong(request.productId());
         Device device = deviceService.register(request.deviceId(), request.secret(), request.model(), request.productKey(), request.remark(), productId);
-        return DeviceResponse.of(device, null, null);
+        return deviceService.toDeviceResponse(device);
     }
 
     @GetMapping("/{deviceId}/telemetry/history")

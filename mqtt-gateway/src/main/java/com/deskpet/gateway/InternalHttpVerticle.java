@@ -46,6 +46,7 @@ public class InternalHttpVerticle extends AbstractVerticle {
             Router router = Router.router(vertx);
             router.route().handler(BodyHandler.create());
             router.post("/internal/command/send").handler(this::handleSendCommand);
+            router.post("/internal/response/send").handler(this::handleSendResponse);
             if (config.metricsEnabled()) {
                 router.get(config.metricsPath()).handler(this::handleMetrics);
             }
@@ -66,18 +67,33 @@ public class InternalHttpVerticle extends AbstractVerticle {
     }
 
     private void handleSendCommand(RoutingContext ctx) {
+        handleSendPublish(ctx, "cmd");
+    }
+
+    private void handleSendResponse(RoutingContext ctx) {
+        handleSendPublish(ctx, "resp");
+    }
+
+    private void handleSendPublish(RoutingContext ctx, String expectedChannel) {
         if (!isAuthorized(ctx)) {
             return;
         }
-        SendCommandRequest request = parseRequest(ctx);
+        SendPublishRequest request = parseRequest(ctx);
         if (request == null) {
             return;
         }
         metrics.onCommandSend();
-        log.info("[CMD-GW] 收到指令请求: deviceId={}, topic={}, qos={}", request.deviceId(), request.topic(), request.qos());
+        log.info("[CMD-GW] 收到下行请求: deviceId={}, topic={}, qos={}", request.deviceId(), request.topic(), request.qos());
         if (request.payload() == null || request.payload().isBlank()) {
             log.warn("[CMD-GW] payload 为空: deviceId={}", request.deviceId());
             sendJson(ctx, 400, false, "EMPTY_PAYLOAD");
+            metrics.onCommandSendFail();
+            return;
+        }
+        if (!TopicAcl.isValidDownlink(request.deviceId(), request.topic())
+                || !request.topic().endsWith("/" + expectedChannel)) {
+            log.warn("[CMD-GW] 非法下行 topic: deviceId={}, topic={}", request.deviceId(), request.topic());
+            sendJson(ctx, 400, false, "INVALID_TOPIC");
             metrics.onCommandSendFail();
             return;
         }
@@ -110,10 +126,10 @@ public class InternalHttpVerticle extends AbstractVerticle {
         return false;
     }
 
-    private SendCommandRequest parseRequest(RoutingContext ctx) {
+    private SendPublishRequest parseRequest(RoutingContext ctx) {
         String body = ctx.body().asString(StandardCharsets.UTF_8.name());
         try {
-            return objectMapper.readValue(body, SendCommandRequest.class);
+            return objectMapper.readValue(body, SendPublishRequest.class);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             sendJson(ctx, 400, false, "BAD_REQUEST");
             return null;
@@ -125,7 +141,7 @@ public class InternalHttpVerticle extends AbstractVerticle {
         return routing.get(deviceId);
     }
 
-    private JsonObject buildCommand(SendCommandRequest request) {
+    private JsonObject buildCommand(SendPublishRequest request) {
         int qos = normalizeQos(request.qos());
         return new JsonObject()
                 .put("deviceId", request.deviceId())

@@ -22,6 +22,10 @@ public enum ErrorCode {
     USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "A0409", "User already exists"),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "A0410", "Invalid password"),
     USER_DISABLED(HttpStatus.FORBIDDEN, "A0411", "User disabled"),
+    USER_NOT_ACTIVATED(HttpStatus.FORBIDDEN, "A0412", "User not activated"),
+
+    TOKEN_INVALID_OR_USED(HttpStatus.BAD_REQUEST, "A0413", "Token invalid or used"),
+    AUTH_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "A0414", "Token expired"),
 
     // 设备错误
     DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "A0420", "Device not found"),

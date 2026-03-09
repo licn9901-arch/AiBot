@@ -5,11 +5,14 @@ import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.model.DeviceSession;
+import com.deskpet.core.model.Product;
 import com.deskpet.core.model.TelemetryLatest;
 import com.deskpet.core.security.SecretHash;
 import com.deskpet.core.security.SecretHasher;
+import com.deskpet.core.util.CosUtil;
 import com.deskpet.core.repository.DeviceRepository;
 import com.deskpet.core.repository.DeviceSessionRepository;
+import com.deskpet.core.repository.ProductRepository;
 import com.deskpet.core.repository.TelemetryLatestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,7 +22,10 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,6 +33,8 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final DeviceSessionRepository sessionRepository;
     private final TelemetryLatestRepository telemetryLatestRepository;
+    private final ProductRepository productRepository;
+    private final CosUtil cosUtil;
     private final SecretHasher secretHasher;
 
     private TimeSeriesService timeSeriesService;
@@ -35,10 +43,14 @@ public class DeviceService {
     public DeviceService(DeviceRepository deviceRepository,
                          DeviceSessionRepository sessionRepository,
                          TelemetryLatestRepository telemetryLatestRepository,
+                         ProductRepository productRepository,
+                         CosUtil cosUtil,
                          SecretHasher secretHasher) {
         this.deviceRepository = deviceRepository;
         this.sessionRepository = sessionRepository;
         this.telemetryLatestRepository = telemetryLatestRepository;
+        this.productRepository = productRepository;
+        this.cosUtil = cosUtil;
         this.secretHasher = secretHasher;
     }
 
@@ -118,12 +130,10 @@ public class DeviceService {
         if (deviceIds == null || deviceIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return deviceRepository.findAllById(deviceIds).stream()
-            .map(device -> DeviceResponse.of(
-                device,
-                findSession(device.deviceId()).orElse(null),
-                findTelemetry(device.deviceId()).orElse(null)
-            ))
+        List<Device> devices = deviceRepository.findAllById(deviceIds);
+        Map<Long, String> productIconMap = loadProductIconMap(devices);
+        return devices.stream()
+            .map(device -> toDeviceResponse(device, productIconMap))
             .toList();
     }
 
@@ -131,13 +141,15 @@ public class DeviceService {
      * 获取所有设备（带会话和遥测信息）
      */
     public List<DeviceResponse> listAll() {
-        return deviceRepository.findAll().stream()
-            .map(device -> DeviceResponse.of(
-                device,
-                findSession(device.deviceId()).orElse(null),
-                findTelemetry(device.deviceId()).orElse(null)
-            ))
+        List<Device> devices = deviceRepository.findAll();
+        Map<Long, String> productIconMap = loadProductIconMap(devices);
+        return devices.stream()
+            .map(device -> toDeviceResponse(device, productIconMap))
             .toList();
+    }
+
+    public DeviceResponse toDeviceResponse(Device device) {
+        return toDeviceResponse(device, loadProductIconMap(List.of(device)));
     }
 
     /**
@@ -151,5 +163,33 @@ public class DeviceService {
         }
         log.info("Gateway cleanup: instanceId={}, offlined={} devices",
                 gatewayInstanceId, sessions.size());
+    }
+
+    private Map<Long, String> loadProductIconMap(List<Device> devices) {
+        Set<Long> productIds = devices.stream()
+                .map(Device::productId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        return productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, product -> cosUtil.resolveObjectUrl(product.getIcon())));
+    }
+
+    private String resolveProductIcon(Map<Long, String> productIconMap, Long productId) {
+        if (productId == null) {
+            return null;
+        }
+        return productIconMap.get(productId);
+    }
+
+    private DeviceResponse toDeviceResponse(Device device, Map<Long, String> productIconMap) {
+        return DeviceResponse.of(
+                device,
+                findSession(device.deviceId()).orElse(null),
+                findTelemetry(device.deviceId()).orElse(null),
+                resolveProductIcon(productIconMap, device.productId())
+        );
     }
 }

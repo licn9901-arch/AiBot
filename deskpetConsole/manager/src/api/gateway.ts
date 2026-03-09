@@ -18,5 +18,5 @@ export interface GatewayMetrics {
 }
 
 export function getGatewayMetrics(): Promise<GatewayMetrics> {
-  return service.get('api/admin/gateway/metrics')
+  return service.get('/admin/gateway/metrics')
 }

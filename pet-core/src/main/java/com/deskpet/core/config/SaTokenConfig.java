@@ -23,6 +23,10 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .notMatch(
                     "/api/auth/login",
                     "/api/auth/register",
+                    "/api/auth/activate",
+                    "/api/auth/forgot-password",
+                    "/api/auth/reset-password",
+                    "/api/auth/reset-password/**",
                     // 内部接口（网关调用）
                     "/internal/**",
                     // OpenAPI 文档

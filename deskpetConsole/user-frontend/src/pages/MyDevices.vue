@@ -1,102 +1,157 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Cell as VanCell, CellGroup as VanCellGroup, Button as VanButton, Loading as VanLoading } from 'vant'
-import { useResponsive } from '@/composables/useResponsive'
-import { useDeviceStore } from '@/stores/device'
+import { computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import CachedImage from '@/components/ui/CachedImage.vue'
 import { usePolling } from '@/composables/usePolling'
+import { useDeviceStore } from '@/stores/device'
 import { formatRelativeTime } from '@/utils/format'
 
-const { isMobile } = useResponsive()
+const route = useRoute()
 const router = useRouter()
 const deviceStore = useDeviceStore()
 
+const filters = [
+  { label: '全部', value: 'all' },
+  { label: '在线', value: 'online' },
+  { label: '离线', value: 'offline' },
+] as const
+
+const activeFilter = computed(() => {
+  const status = route.query.status
+  return status === 'online' || status === 'offline' || status === 'all' ? status : 'all'
+})
+
+const filteredDevices = computed(() => {
+  if (activeFilter.value === 'online') {
+    return deviceStore.devices.filter((item) => item.online)
+  }
+  if (activeFilter.value === 'offline') {
+    return deviceStore.devices.filter((item) => !item.online)
+  }
+  return deviceStore.devices
+})
+
+const deviceCards = computed(() =>
+  filteredDevices.value.map((device, index) => ({
+    ...device,
+    title: device.remark || device.model || device.deviceId,
+    statusLine: device.online
+      ? `${device.deviceId} · 在线 · ${device.lastSeen ? `${formatRelativeTime(device.lastSeen)}同步` : '刚刚同步'}`
+      : `${device.deviceId} · 离线 · ${formatRelativeTime(device.lastSeen)}`,
+    description: device.online ? '支持进入控制台进行实时操控。' : '离线状态下控制功能不可用。',
+    primaryActionText: device.online && index === 0 ? '置顶中' : device.online ? '在线设备' : '不可控制',
+    secondaryActionText: device.online ? '进入控制台' : '查看详情',
+  })),
+)
+
+function updateFilter(status: 'all' | 'online' | 'offline') {
+  router.replace({ path: '/devices', query: status === 'all' ? {} : { status } })
+}
+
+async function refreshDevices() {
+  await deviceStore.fetchDevices()
+}
+
+function openDevice(deviceId: string) {
+  router.push(`/devices/${deviceId}`)
+}
+
+function goToActivate() {
+  router.push('/activate')
+}
+
 usePolling(() => deviceStore.fetchDevices(), 10000)
 
-onMounted(() => {
-  if (deviceStore.devices.length === 0) {
-    deviceStore.fetchDevices()
-  }
+onMounted(async () => {
+  await refreshDevices()
 })
 </script>
 
 <template>
-  <div>
-    <h1 class="page-title">我的设备</h1>
+  <div class="devices-page">
+    <section class="devices-header">
+      <div class="devices-header-copy">
+        <h1 class="devices-title">设备管理</h1>
+        <p class="devices-subtitle">统一管理设备状态与控制入口。</p>
+      </div>
+      <div class="devices-header-actions">
+        <button type="button" class="devices-toolbar-button devices-toolbar-button-light" @click="refreshDevices">
+          {{ deviceStore.loading ? '刷新中...' : '↻ 刷新状态' }}
+        </button>
+        <button type="button" class="devices-toolbar-button devices-toolbar-button-primary" @click="goToActivate">+ 添加设备</button>
+      </div>
+    </section>
 
-    <!-- 加载中 -->
-    <div v-if="deviceStore.loading && deviceStore.devices.length === 0" style="text-align: center; padding: 60px 0;">
-      <template v-if="isMobile">
-        <VanLoading type="spinner" color="var(--primary)">加载中...</VanLoading>
-      </template>
-      <template v-else>
-        <el-icon class="is-loading" :size="24" style="color: var(--primary);"><i class="el-icon-loading" /></el-icon>
-        <div style="color: var(--muted); margin-top: 8px;">加载中...</div>
-      </template>
-    </div>
+    <section class="devices-filter-row">
+      <button
+        v-for="filter in filters"
+        :key="filter.value"
+        type="button"
+        class="devices-filter-chip"
+        :class="[activeFilter === filter.value ? 'is-active' : '', `is-${filter.value}`]"
+        @click="updateFilter(filter.value)"
+      >
+        {{ filter.label }}
+      </button>
+    </section>
 
-    <!-- 空状态 -->
-    <div v-else-if="deviceStore.devices.length === 0" class="empty-state">
-      <div class="empty-text">暂无设备，去激活授权码添加设备吧</div>
-      <template v-if="isMobile">
-        <VanButton type="primary" round size="small" color="var(--primary)" @click="router.push('/activate')">
-          激活授权码
-        </VanButton>
-      </template>
-      <template v-else>
-        <el-button type="primary" round @click="router.push('/activate')" style="background: var(--primary); border-color: var(--primary);">
-          激活授权码
-        </el-button>
-      </template>
-    </div>
+    <section v-if="deviceStore.loading && deviceCards.length === 0" class="devices-empty">
+      <div class="ui-empty-emoji">⏳</div>
+      <div>正在拉取你的设备列表...</div>
+    </section>
 
-    <!-- 移动端设备列表 -->
-    <template v-else-if="isMobile">
-      <VanCellGroup inset>
-        <VanCell
-          v-for="device in deviceStore.devices"
-          :key="device.deviceId"
-          :title="device.remark || device.deviceId"
-          :label="`${device.model || device.productKey} · ${device.online ? '在线' : '离线 ' + formatRelativeTime(device.lastSeen)}`"
-          is-link
-          @click="router.push(`/devices/${device.deviceId}`)"
-        >
-          <template #right-icon>
-            <span class="status-dot" :class="device.online ? 'online' : 'offline'" style="margin-top: 12px;"></span>
-          </template>
-        </VanCell>
-      </VanCellGroup>
-    </template>
+    <section v-else-if="deviceCards.length === 0" class="devices-empty">
+      <div class="ui-empty-emoji">📭</div>
+      <div>当前筛选下没有设备，试试切换筛选或前往添加设备。</div>
+      <button type="button" class="ui-button primary" @click="goToActivate">去添加</button>
+    </section>
 
-    <!-- PC 端设备卡片网格 -->
-    <template v-else>
-      <div class="grid-3">
-        <div
-          v-for="device in deviceStore.devices"
-          :key="device.deviceId"
-          class="card"
-          style="cursor: pointer; transition: transform 0.2s;"
-          @click="router.push(`/devices/${device.deviceId}`)"
-          @mouseenter="($event.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'"
-          @mouseleave="($event.currentTarget as HTMLElement).style.transform = ''"
-        >
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <span style="font-weight: 600; font-size: 15px;">{{ device.remark || device.deviceId }}</span>
-            <span class="tag" :class="device.online ? 'success' : 'danger'">
-              {{ device.online ? '在线' : '离线' }}
-            </span>
+    <section v-else class="devices-grid">
+      <article
+        v-for="card in deviceCards"
+        :key="card.deviceId"
+        class="devices-card"
+      >
+        <div class="devices-card-main">
+          <div class="devices-card-icon-wrap">
+            <div class="devices-card-icon" :class="card.online ? 'is-online' : 'is-offline'">
+              <CachedImage
+                v-if="card.productIcon"
+                :src="card.productIcon"
+                :cache-key="`product-icon:${card.productKey}`"
+                :alt="card.title"
+                class="devices-card-image"
+              >
+                <template #fallback>
+                  <span>🤖</span>
+                </template>
+              </CachedImage>
+              <span v-else>🤖</span>
+            </div>
           </div>
-          <div style="font-size: 13px; color: var(--muted);">
-            {{ device.model || device.productKey }}
-          </div>
-          <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">
-            SN: {{ device.deviceId }}
-          </div>
-          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
-            {{ device.online ? '当前在线' : `最后在线 ${formatRelativeTime(device.lastSeen)}` }}
+          <div class="devices-card-copy">
+            <h2 class="devices-card-title">{{ card.title }}</h2>
+            <div class="devices-card-status-line" :class="card.online ? 'is-online' : 'is-offline'">{{ card.statusLine }}</div>
+            <p class="devices-card-description">{{ card.description }}</p>
+            <div class="devices-card-actions">
+              <button
+                type="button"
+                class="devices-card-pill"
+                :class="card.online ? 'is-online' : 'is-offline'"
+              >
+                {{ card.primaryActionText }}
+              </button>
+              <button
+                type="button"
+                class="devices-card-pill is-neutral"
+                @click="openDevice(card.deviceId)"
+              >
+                {{ card.secondaryActionText }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </template>
+      </article>
+    </section>
   </div>
 </template>

@@ -25,13 +25,16 @@
 | 方向 | Topic | QoS | 说明 |
 | --- | --- | --- | --- |
 | 订阅 | `pet/{deviceId}/cmd` | 1 | 下行指令 |
+| 订阅 | `pet/{deviceId}/resp` | 1 | 设备主动请求的业务响应（V0.6 新增） |
 | 发布 | `pet/{deviceId}/cmd/ack` | 1 | 指令回执 |
 | 发布 | `pet/{deviceId}/telemetry` | 0 | 遥测上报 |
 | 发布 | `pet/{deviceId}/event` | 1 | 事件上报（V0.3 新增） |
+| 发布 | `pet/{deviceId}/req` | 1 | 设备主动发起业务请求（V0.6 新增） |
 
 注意：
 - 网关强校验 Topic 白名单与 `deviceId` 一致性。
 - 在线状态由连接事件决定。
+- `req/resp` 用于“设备请求 -> 服务端响应”的业务调用，不替代 `cmd/ack`。
 
 ---
 
@@ -39,7 +42,8 @@
 
 设备只能：
 - 订阅 `pet/{deviceId}/cmd`
-- 发布 `pet/{deviceId}/telemetry`、`pet/{deviceId}/cmd/ack`、`pet/{deviceId}/event`
+- 订阅 `pet/{deviceId}/resp`
+- 发布 `pet/{deviceId}/telemetry`、`pet/{deviceId}/cmd/ack`、`pet/{deviceId}/event`、`pet/{deviceId}/req`
 
 其他 Topic 会被网关忽略或拒绝。
 
@@ -144,6 +148,112 @@ Topic：`pet/{deviceId}/event`
 | voiceWakeup | info | 语音唤醒 | keyword, confidence |
 | buttonPress | info | 按键事件 | button, pressType |
 
+### 4.5 设备请求（Device -> Core）（V0.6 新增）
+
+Topic：`pet/{deviceId}/req`
+
+```json
+{
+  "schemaVersion": 1,
+  "reqId": "uuid",
+  "type": "getWeather",
+  "ts": 1730000000,
+  "payload": {
+    "location": "Shanghai",
+    "days": 1
+  }
+}
+```
+
+字段说明：
+- `reqId`：请求唯一标识，用于去重、超时控制和匹配响应
+- `type`：请求类型，建议使用动作名，如 `getWeather`、`chat`、`getConfig`
+- `payload`：请求参数，结构由 `type` 决定
+
+设备请求 type 建议值（V0.6）：
+- `getWeather` - 查询天气
+- `chat` - 获取对话回复
+- `getConfig` - 拉取设备配置
+
+### 4.6 设备请求响应（Core -> Device）（V0.6 新增）
+
+Topic：`pet/{deviceId}/resp`
+
+```json
+{
+  "schemaVersion": 1,
+  "reqId": "uuid",
+  "type": "getWeather",
+  "ok": true,
+  "code": "DONE",
+  "message": "success",
+  "ts": 1730000001,
+  "payload": {
+    "location": "Shanghai",
+    "temperature": 26,
+    "condition": "Cloudy",
+    "humidity": 72
+  }
+}
+```
+
+失败响应示例：
+
+```json
+{
+  "schemaVersion": 1,
+  "reqId": "uuid",
+  "type": "getWeather",
+  "ok": false,
+  "code": "UPSTREAM_ERROR",
+  "message": "weather service unavailable",
+  "ts": 1730000001
+}
+```
+
+建议 code：
+`DONE` / `BAD_PAYLOAD` / `UNSUPPORTED_TYPE` / `TIMEOUT` / `UPSTREAM_ERROR` / `RATE_LIMITED` / `INTERNAL_ERROR`
+
+### 4.7 天气查询示例（Device -> Core -> Device）
+
+设备请求：
+
+Topic：`pet/{deviceId}/req`
+
+```json
+{
+  "schemaVersion": 1,
+  "reqId": "7f4d1c9e-8a1a-4d35-8f62-1f7c23b2d111",
+  "type": "getWeather",
+  "ts": 1730000000,
+  "payload": {
+    "location": "Shanghai"
+  }
+}
+```
+
+服务端响应：
+
+Topic：`pet/{deviceId}/resp`
+
+```json
+{
+  "schemaVersion": 1,
+  "reqId": "7f4d1c9e-8a1a-4d35-8f62-1f7c23b2d111",
+  "type": "getWeather",
+  "ok": true,
+  "code": "DONE",
+  "message": "success",
+  "ts": 1730000001,
+  "payload": {
+    "location": "Shanghai",
+    "temperature": 26,
+    "condition": "Cloudy",
+    "humidity": 72
+  }
+}
+```
+
 ---
 
 ## 5. 指令 payload 说明
@@ -183,6 +293,10 @@ Topic：`pet/{deviceId}/event`
 2. **安全限制**：对 speed/duration 做限幅，触发限制时回执 `SAFETY_LIMIT`。
 3. **频率限制**：高频指令可拒绝并回 `BUSY`。
 4. **时间戳**：`ts` 使用 Unix 秒级时间戳，事件 `timestamp` 使用毫秒级。
+5. **请求匹配**：设备对 `req` / `resp` 必须使用 `reqId` 做一一匹配。
+6. **请求超时**：设备发起 `req` 后建议等待 5 秒，超时后本地标记失败，可按业务决定是否重试。
+7. **并发控制**：设备同时在途的 `req` 数量建议不超过 3 个，避免响应乱序带来复杂度。
+8. **持久化策略**：`resp` 不建议使用 retained message；设备掉线期间的响应默认可丢弃，由上层业务重试。
 
 ---
 
@@ -196,10 +310,19 @@ Topic：`pet/{deviceId}/event`
 ## 8. 交互流程（简版）
 
 1. 设备连接 MQTT，完成鉴权。
-2. 设备订阅 `pet/{deviceId}/cmd`。
+2. 设备订阅 `pet/{deviceId}/cmd` 与 `pet/{deviceId}/resp`。
 3. Core 下发指令 -> 设备执行 -> 设备回 `cmd/ack`。
 4. 设备定期上报 `telemetry`。
 5. 设备检测到事件时上报 `event`。
+6. 设备需要服务端数据时，发布 `req` -> 网关转发 `pet-core` / `pet-ai` -> 服务端回 `resp`。
+
+### 8.1 设备主动请求天气时序
+
+1. 设备发布 `pet/{deviceId}/req`，`type=getWeather`。
+2. mqtt-gateway 校验 Topic 与设备身份，转发请求给 `pet-core`。
+3. pet-core 调用内部天气服务或 `pet-ai` 能力组装结果。
+4. pet-core 通过 mqtt-gateway 发布 `pet/{deviceId}/resp`。
+5. 设备按 `reqId` 匹配响应并播报或展示天气结果。
 
 ---
 

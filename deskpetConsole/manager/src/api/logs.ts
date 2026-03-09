@@ -42,20 +42,20 @@ export interface DeviceEventParams {
 
 // 操作日志
 export function getOperationLogs(params: OperationLogParams = {}): Promise<LogPageResponse> {
-  return service.get('api/admin/logs', { params })
+  return service.get('/admin/logs', { params })
 }
 
 // 应用日志
 export function getAppLogs(params: AppLogParams = {}): Promise<LogPageResponse> {
-  return service.get('api/admin/logs/app', { params })
+  return service.get('/admin/logs/app', { params })
 }
 
 // 应用日志统计
 export function getAppLogStats(hours: number = 24): Promise<Record<string, any>> {
-  return service.get('api/admin/logs/app/stats', { params: { hours } })
+  return service.get('/admin/logs/app/stats', { params: { hours } })
 }
 
 // 设备事件
 export function getDeviceEventLogs(params: DeviceEventParams = {}): Promise<LogPageResponse> {
-  return service.get('api/admin/logs/events', { params })
+  return service.get('/admin/logs/events', { params })
 }

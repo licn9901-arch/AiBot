@@ -4,6 +4,7 @@ import com.deskpet.core.dto.*;
 import com.deskpet.core.model.Device;
 import com.deskpet.core.service.CommandService;
 import com.deskpet.core.service.DeviceEventService;
+import com.deskpet.core.service.DeviceRequestService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.TelemetryService;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -28,15 +29,18 @@ public class InternalController {
     private final TelemetryService telemetryService;
     private final CommandService commandService;
     private final DeviceEventService deviceEventService;
+    private final DeviceRequestService deviceRequestService;
 
     public InternalController(DeviceService deviceService,
                               TelemetryService telemetryService,
                               CommandService commandService,
-                              DeviceEventService deviceEventService) {
+                              DeviceEventService deviceEventService,
+                              DeviceRequestService deviceRequestService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.commandService = commandService;
         this.deviceEventService = deviceEventService;
+        this.deviceRequestService = deviceRequestService;
     }
 
     @GetMapping("/auth")
@@ -83,6 +87,13 @@ public class InternalController {
     public ResponseEntity<Void> event(@PathVariable String deviceId,
                                                      @RequestBody DeviceEventRequest request) {
         deviceEventService.recordEvent(deviceId, request);
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/request/{deviceId}")
+    public ResponseEntity<Void> request(@PathVariable String deviceId,
+                                        @RequestBody DeviceRequestEnvelope request) {
+        deviceRequestService.handleRequest(deviceId, request);
         return ResponseEntity.accepted().build();
     }
 

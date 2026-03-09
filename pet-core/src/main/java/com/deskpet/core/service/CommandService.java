@@ -3,8 +3,8 @@ package com.deskpet.core.service;
 import com.deskpet.core.dto.AckRequest;
 import com.deskpet.core.dto.CommandEnvelope;
 import com.deskpet.core.dto.CommandResponse;
-import com.deskpet.core.dto.GatewaySendCommandRequest;
-import com.deskpet.core.dto.GatewaySendCommandResponse;
+import com.deskpet.core.dto.GatewayPublishRequest;
+import com.deskpet.core.dto.GatewayPublishResponse;
 import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.Command;
@@ -127,11 +127,11 @@ public class CommandService {
             pushCommandStatusUpdate(saved);
             return saved;
         }
-        GatewaySendCommandResponse response;
+        GatewayPublishResponse response;
         try {
             log.info("[CMD] 发送到网关: reqId={}, deviceId={}", command.reqId(), command.deviceId());
             response = gatewayClient.sendCommand(
-                    new GatewaySendCommandRequest(command.deviceId(), "pet/" + command.deviceId() + "/cmd", 1, payloadJson));
+                    new GatewayPublishRequest(command.deviceId(), "pet/" + command.deviceId() + "/cmd", 1, payloadJson));
             log.info("[CMD] 网关响应: reqId={}, ok={}, reason={}", command.reqId(),
                     response != null ? response.ok() : "null",
                     response != null ? response.reason() : "null");

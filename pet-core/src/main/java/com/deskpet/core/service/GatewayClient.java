@@ -1,7 +1,7 @@
 package com.deskpet.core.service;
 
-import com.deskpet.core.dto.GatewaySendCommandRequest;
-import com.deskpet.core.dto.GatewaySendCommandResponse;
+import com.deskpet.core.dto.GatewayPublishRequest;
+import com.deskpet.core.dto.GatewayPublishResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,17 +27,26 @@ public class GatewayClient {
     @Value("${internal.token:}")
     private String internalToken;
 
-    public GatewaySendCommandResponse sendCommand(GatewaySendCommandRequest request) {
+    public GatewayPublishResponse sendCommand(GatewayPublishRequest request) {
         String url = gatewayBaseUrl + "/internal/command/send";
-        log.info("[GW] 发送指令到网关: url={}, deviceId={}, topic={}, qos={}, payload={}",
-                url, request.deviceId(), request.topic(), request.qos(), request.payload());
+        return publish(url, request, "发送指令");
+    }
+
+    public GatewayPublishResponse sendResponse(GatewayPublishRequest request) {
+        String url = gatewayBaseUrl + "/internal/response/send";
+        return publish(url, request, "发送设备响应");
+    }
+
+    private GatewayPublishResponse publish(String url, GatewayPublishRequest request, String action) {
+        log.info("[GW] {}到网关: url={}, deviceId={}, topic={}, qos={}, payload={}",
+                action, url, request.deviceId(), request.topic(), request.qos(), request.payload());
         HttpHeaders headers = new HttpHeaders();
         if (internalToken != null && !internalToken.isBlank()) {
             headers.add("X-Internal-Token", internalToken);
         }
         try {
-            ResponseEntity<GatewaySendCommandResponse> response = restTemplate
-                    .postForEntity(url, new HttpEntity<>(request, headers), GatewaySendCommandResponse.class);
+            ResponseEntity<GatewayPublishResponse> response = restTemplate
+                    .postForEntity(url, new HttpEntity<>(request, headers), GatewayPublishResponse.class);
             log.info("[GW] 网关响应: statusCode={}, body={}", response.getStatusCode(), response.getBody());
             return response.getBody();
         } catch (HttpStatusCodeException ex) {
@@ -46,7 +55,7 @@ public class GatewayClient {
                 String body = ex.getResponseBodyAsString();
                 if (!body.isBlank()) {
                     try {
-                        return objectMapper.readValue(body, GatewaySendCommandResponse.class);
+                        return objectMapper.readValue(body, GatewayPublishResponse.class);
                     } catch (Exception ignore) {
                         log.error("[GW] 解析网关 409 响应失败: body={}", body);
                         return null;

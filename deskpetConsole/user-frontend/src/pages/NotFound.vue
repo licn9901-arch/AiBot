@@ -1,13 +1,8 @@
-<script setup lang="ts">
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-</script>
-
 <template>
-  <div class="empty-state" style="min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-    <div style="font-size: 72px; font-weight: 700; color: var(--border); font-family: var(--font-display);">404</div>
-    <div style="font-size: 16px; color: var(--muted); margin: 12px 0 24px;">页面不存在</div>
-    <button class="btn primary" @click="router.push('/home')">返回首页</button>
+  <div class="ui-card ui-empty" style="max-width: 560px; margin: 120px auto;">
+    <div class="ui-empty-emoji">🧭</div>
+    <h1 style="margin: 0; font-size: 32px;">页面不存在</h1>
+    <p class="page-subtitle" style="margin: 0; text-align: center;">你访问的路径不存在，返回首页继续管理你的 DeskPet 设备。</p>
+    <RouterLink to="/home" class="ui-button primary">返回首页</RouterLink>
   </div>
 </template>

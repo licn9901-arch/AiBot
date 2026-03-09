@@ -5,14 +5,29 @@ export interface UserLoginRequest {
 
 export interface UserLoginResponse {
   token: string
-  user: UserResponse
+  userId: number
+  username: string
+  roles: string[]
 }
 
 export interface UserRegisterRequest {
   username: string
   password: string
-  email?: string
+  email: string
   phone?: string
+}
+
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+}
+
+export interface TokenValidationResponse {
+  valid: boolean
 }
 
 export interface UserResponse {
@@ -21,6 +36,7 @@ export interface UserResponse {
   email: string | null
   phone: string | null
   avatar: string | null
+  avatarKey: string | null
   createdAt: string
   updatedAt: string | null
 }

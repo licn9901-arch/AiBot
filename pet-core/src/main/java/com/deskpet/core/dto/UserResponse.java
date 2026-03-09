@@ -15,8 +15,10 @@ public record UserResponse(
     String email,
     @Schema(description = "手机号", example = "13800000000")
     String phone,
-    @Schema(description = "头像URL", example = "https://example.com/avatar.png")
+    @Schema(description = "头像访问链接", example = "https://example.com/avatar.png")
     String avatar,
+    @Schema(description = "头像对象 key", example = "uploads/avatars/2026/03/11/avatar.png")
+    String avatarKey,
     @Schema(description = "状态", example = "ACTIVE")
     String status,
     @Schema(description = "角色列表", example = "[\"USER\"]")
@@ -24,7 +26,7 @@ public record UserResponse(
     @Schema(description = "创建时间", example = "2026-01-21T10:30:00Z")
     Instant createdAt
 ) {
-    public static UserResponse from(SysUser user) {
+    public static UserResponse from(SysUser user, String avatarUrl, String avatarKey) {
         List<String> roleNames = user.getRoles().stream()
             .map(role -> role.getCode())
             .toList();
@@ -33,20 +35,22 @@ public record UserResponse(
             user.getUsername(),
             user.getEmail(),
             user.getPhone(),
-            user.getAvatar(),
+            avatarUrl,
+            avatarKey,
             user.getStatus(),
             roleNames,
             user.getCreatedAt()
         );
     }
 
-    public static UserResponse from(SysUser user, List<String> roles) {
+    public static UserResponse from(SysUser user, List<String> roles, String avatarUrl, String avatarKey) {
         return new UserResponse(
             user.getId(),
             user.getUsername(),
             user.getEmail(),
             user.getPhone(),
-            user.getAvatar(),
+            avatarUrl,
+            avatarKey,
             user.getStatus(),
             roles,
             user.getCreatedAt()

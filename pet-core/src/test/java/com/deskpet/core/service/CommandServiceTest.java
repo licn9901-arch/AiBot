@@ -1,7 +1,7 @@
 package com.deskpet.core.service;
 
 import com.deskpet.core.dto.AckRequest;
-import com.deskpet.core.dto.GatewaySendCommandResponse;
+import com.deskpet.core.dto.GatewayPublishResponse;
 import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.model.Command;
 import com.deskpet.core.model.CommandStatus;
@@ -52,7 +52,7 @@ class CommandServiceTest {
     @Test
     void createCommand_gatewayOk_marksSent() {
         when(deviceService.find("pet-1")).thenReturn(Optional.of(mockDevice("pet-1")));
-        when(gatewayClient.sendCommand(any())).thenReturn(new GatewaySendCommandResponse(true, "OK"));
+        when(gatewayClient.sendCommand(any())).thenReturn(new GatewayPublishResponse(true, "OK"));
 
         Command result = commandService.createCommand("pet-1", "move", Map.of("direction", "left"));
 
@@ -62,7 +62,7 @@ class CommandServiceTest {
     @Test
     void createCommand_gatewayOffline_marksFailed() {
         when(deviceService.find("pet-1")).thenReturn(Optional.of(mockDevice("pet-1")));
-        when(gatewayClient.sendCommand(any())).thenReturn(new GatewaySendCommandResponse(false, "OFFLINE"));
+        when(gatewayClient.sendCommand(any())).thenReturn(new GatewayPublishResponse(false, "OFFLINE"));
 
         Command result = commandService.createCommand("pet-1", "move", Map.of("direction", "left"));
 

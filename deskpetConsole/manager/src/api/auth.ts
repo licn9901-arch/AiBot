@@ -13,9 +13,9 @@ export interface AdminLoginResponse {
 }
 
 export function login(data: AdminLoginRequest): Promise<AdminLoginResponse> {
-  return service.post('api/auth/login', data)
+  return service.post('/auth/login', data)
 }
 
 export function logout(): Promise<void> {
-  return service.post('api/auth/logout')
+  return service.post('/auth/logout')
 }

@@ -1,17 +1,21 @@
 package com.deskpet.core.controller;
 
 import com.deskpet.core.dto.AckRequest;
+import com.deskpet.core.error.GlobalExceptionHandler;
 import com.deskpet.core.service.CommandService;
+import com.deskpet.core.service.DeviceEventService;
+import com.deskpet.core.service.DeviceRequestService;
 import com.deskpet.core.service.DeviceService;
 import com.deskpet.core.service.TelemetryService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Map;
 
@@ -21,21 +25,34 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(InternalController.class)
-@TestPropertySource(properties = "internal.token=")
+@ExtendWith(MockitoExtension.class)
 class InternalControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private DeviceService deviceService;
 
-    @MockBean
+    @Mock
     private TelemetryService telemetryService;
 
-    @MockBean
+    @Mock
     private CommandService commandService;
+
+    @Mock
+    private DeviceEventService deviceEventService;
+
+    @Mock
+    private DeviceRequestService deviceRequestService;
+
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                new InternalController(deviceService, telemetryService, commandService, deviceEventService, deviceRequestService)
+            )
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
+    }
 
     @Test
     void telemetryAccepted_andDelegated() throws Exception {
@@ -52,9 +69,9 @@ class InternalControllerTest {
                 """;
 
         mockMvc.perform(post("/internal/telemetry/pet-1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isAccepted());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isAccepted());
 
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
         verify(telemetryService).updateLatest(eq("pet-1"), captor.capture());
@@ -78,12 +95,38 @@ class InternalControllerTest {
                 """;
 
         mockMvc.perform(post("/internal/ack/pet-1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isAccepted());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isAccepted());
 
         ArgumentCaptor<AckRequest> captor = ArgumentCaptor.forClass(AckRequest.class);
         verify(commandService).handleAck(eq("req-1"), captor.capture());
         assertThat(captor.getValue().ok()).isTrue();
+    }
+
+    @Test
+    void requestAccepted_andDelegated() throws Exception {
+        String body = """
+                {
+                  "schemaVersion": 1,
+                  "reqId": "req-weather-1",
+                  "type": "getWeather",
+                  "ts": 1710000001,
+                  "payload": {
+                    "location": "Shanghai"
+                  }
+                }
+                """;
+
+        mockMvc.perform(post("/internal/request/pet-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isAccepted());
+
+        ArgumentCaptor<com.deskpet.core.dto.DeviceRequestEnvelope> captor =
+                ArgumentCaptor.forClass(com.deskpet.core.dto.DeviceRequestEnvelope.class);
+        verify(deviceRequestService).handleRequest(eq("pet-1"), captor.capture());
+        assertThat(captor.getValue().type()).isEqualTo("getWeather");
+        assertThat(captor.getValue().payload()).containsEntry("location", "Shanghai");
     }
 }

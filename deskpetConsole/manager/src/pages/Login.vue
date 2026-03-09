@@ -35,7 +35,7 @@ async function handleLogin() {
       <div class="brand" style="justify-content: center; margin-bottom: 28px;">
         <div class="brand-mark"></div>
         <div>
-          <div class="brand-title">DeskPet Console</div>
+          <div class="brand-title">Cubee Console</div>
           <div class="brand-subtitle">桌宠管理后台</div>
         </div>
       </div>

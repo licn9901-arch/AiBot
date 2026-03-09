@@ -1,12 +1,12 @@
 import axios from 'axios'
-import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
+import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
-import type { ErrorResponse } from '../types/api'
-import router from '../router'
+import type { ErrorResponse } from '@/types/api'
+import router from '@/router'
 
 const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 10000
+  timeout: 10000,
 })
 
 service.interceptors.request.use(
@@ -18,19 +18,15 @@ service.interceptors.request.use(
     }
     return config
   },
-  (error: AxiosError) => {
-    return Promise.reject(error)
-  }
+  (error: AxiosError) => Promise.reject(error),
 )
 
 service.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response.data
-  },
+  (response: AxiosResponse) => response.data,
   (error: AxiosError<ErrorResponse>) => {
     let message = '网络错误'
 
-    if (error.response && error.response.data) {
+    if (error.response?.data) {
       const errData = error.response.data
 
       if (errData.message) {
@@ -47,7 +43,7 @@ service.interceptors.response.use(
 
     ElMessage.error(message)
     return Promise.reject(error)
-  }
+  },
 )
 
 export default service

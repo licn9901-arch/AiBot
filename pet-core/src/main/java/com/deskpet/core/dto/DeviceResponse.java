@@ -15,6 +15,8 @@ public record DeviceResponse(
         String model,
         @Schema(description = "产品标识", example = "deskpet-v1")
         String productKey,
+        @Schema(description = "产品图标访问链接", example = "https://example.com/product-icon.png")
+        String productIcon,
         @Schema(description = "备注", example = "桌面测试设备")
         String remark,
         @Schema(description = "注册时间", example = "2026-01-21T10:30:00Z")
@@ -26,10 +28,20 @@ public record DeviceResponse(
         @Schema(description = "最新遥测", example = "{\"battery\":0.87,\"rssi\":-55,\"firmwareVersion\":\"0.1.0\"}")
         Map<String, Object> telemetry
 ) {
-    public static DeviceResponse of(Device device, DeviceSession session, TelemetryLatest telemetry) {
+    public static DeviceResponse of(Device device, DeviceSession session, TelemetryLatest telemetry, String productIcon) {
         boolean online = session != null && session.online();
         Instant lastSeen = session == null ? null : session.lastSeen();
         Map<String, Object> latest = telemetry == null ? null : telemetry.telemetry();
-        return new DeviceResponse(device.deviceId(), device.model(), device.productKey(), device.remark(), device.createdAt(), online, lastSeen, latest);
+        return new DeviceResponse(
+                device.deviceId(),
+                device.model(),
+                device.productKey(),
+                productIcon,
+                device.remark(),
+                device.createdAt(),
+                online,
+                lastSeen,
+                latest
+        );
     }
 }

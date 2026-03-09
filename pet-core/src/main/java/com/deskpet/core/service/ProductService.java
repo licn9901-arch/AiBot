@@ -5,6 +5,7 @@ import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
 import com.deskpet.core.model.*;
 import com.deskpet.core.repository.*;
+import com.deskpet.core.util.CosUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class ProductService {
     private final ThingModelPropertyRepository propertyRepository;
     private final ThingModelServiceRepository serviceRepository;
     private final ThingModelEventRepository eventRepository;
+    private final CosUtil cosUtil;
     private final ObjectMapper objectMapper;
 
     // ==================== 产品管理 ====================
@@ -43,12 +45,13 @@ public class ProductService {
             .productKey(request.productKey())
             .name(request.name())
             .description(request.description())
+            .icon(normalizeIconValue(request.icon()))
             .status(Product.Status.ACTIVE)
             .build();
 
         product = productRepository.save(product);
         log.info("Product created: productKey={}", product.getProductKey());
-        return ProductResponse.from(product);
+        return buildProductResponse(product);
     }
 
     /**
@@ -57,7 +60,7 @@ public class ProductService {
     @Transactional(rollbackFor = Exception.class)
     public List<ProductResponse> listProducts() {
         return productRepository.findAll().stream()
-            .map(ProductResponse::from)
+            .map(this::buildProductResponse)
             .toList();
     }
 
@@ -68,7 +71,7 @@ public class ProductService {
     public ThingModelDTO getProductWithThingModel(String productKey) {
         Product product = productRepository.findByProductKeyWithThingModel(productKey)
             .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "产品不存在"));
-        return ThingModelDTO.from(product);
+        return buildThingModel(product);
     }
 
     /**
@@ -85,6 +88,9 @@ public class ProductService {
         if (request.description() != null) {
             product.setDescription(request.description());
         }
+        if (request.icon() != null) {
+            product.setIcon(normalizeIconValue(request.icon()));
+        }
         if (request.status() != null) {
             try {
                 product.setStatus(Product.Status.valueOf(request.status()));
@@ -95,7 +101,7 @@ public class ProductService {
 
         product = productRepository.save(product);
         log.info("Product updated: productKey={}", productKey);
-        return ProductResponse.from(product);
+        return buildProductResponse(product);
     }
 
     /**
@@ -473,5 +479,25 @@ public class ProductService {
 
         log.info("Thing model imported: productKey={}", productKey);
         return getProductWithThingModel(productKey);
+    }
+
+    private ProductResponse buildProductResponse(Product product) {
+        String iconKey = normalizeIconValue(product.getIcon());
+        String iconUrl = cosUtil.resolveObjectUrl(iconKey);
+        return ProductResponse.from(product, iconUrl, iconKey);
+    }
+
+    private ThingModelDTO buildThingModel(Product product) {
+        String iconKey = normalizeIconValue(product.getIcon());
+        String iconUrl = cosUtil.resolveObjectUrl(iconKey);
+        return ThingModelDTO.from(product, iconUrl, iconKey);
+    }
+
+    private String normalizeIconValue(String icon) {
+        if (icon == null || icon.isBlank()) {
+            return null;
+        }
+        String iconKey = cosUtil.resolveObjectKey(icon);
+        return iconKey == null || iconKey.isBlank() ? null : iconKey;
     }
 }

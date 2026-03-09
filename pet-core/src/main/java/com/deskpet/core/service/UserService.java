@@ -1,13 +1,22 @@
 package com.deskpet.core.service;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.deskpet.core.dto.*;
+import com.deskpet.core.dto.ForgotPasswordRequest;
+import com.deskpet.core.dto.ResetPasswordRequest;
+import com.deskpet.core.dto.UserLoginRequest;
+import com.deskpet.core.dto.UserLoginResponse;
+import com.deskpet.core.dto.UserRegisterRequest;
+import com.deskpet.core.dto.UserResponse;
+import com.deskpet.core.dto.UserUpdateRequest;
 import com.deskpet.core.error.BusinessException;
 import com.deskpet.core.error.ErrorCode;
+import com.deskpet.core.model.AuthToken;
+import com.deskpet.core.model.AuthTokenType;
 import com.deskpet.core.model.SysRole;
 import com.deskpet.core.model.SysUser;
 import com.deskpet.core.repository.SysRoleRepository;
 import com.deskpet.core.repository.SysUserRepository;
+import com.deskpet.core.util.CosUtil;
 import com.deskpet.core.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,88 +28,115 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 用户服务
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final String USER_STATUS_ACTIVE = "ACTIVE";
+    private static final String USER_STATUS_DISABLED = "DISABLED";
+    private static final String USER_STATUS_PENDING_ACTIVATION = "PENDING_ACTIVATION";
+
     private final SysUserRepository userRepository;
     private final SysRoleRepository roleRepository;
     private final OperationLogService operationLogService;
     private final PermissionService permissionService;
+    private final AuthTokenService authTokenService;
+    private final AuthMailService authMailService;
+    private final CosUtil cosUtil;
 
-    /**
-     * 用户注册
-     */
     @Transactional(rollbackFor = Exception.class)
-    public UserResponse register(UserRegisterRequest request) {
-        // 检查用户名是否已存在
-        if (userRepository.existsByUsername(request.username())) {
-            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "用户名已存在");
-        }
+    public void register(UserRegisterRequest request) {
+        validateRegisterRequest(request);
 
-        // 检查邮箱是否已存在
-        if (request.email() != null && !request.email().isBlank()
-            && userRepository.existsByEmail(request.email())) {
-            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "邮箱已被使用");
-        }
-
-        // 检查手机号是否已存在
-        if (request.phone() != null && !request.phone().isBlank()
-            && userRepository.existsByPhone(request.phone())) {
-            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "手机号已被使用");
-        }
-
-        // 创建用户
         SysUser user = SysUser.builder()
             .username(request.username())
             .passwordHash(PasswordUtil.encode(request.password()))
             .email(request.email())
             .phone(request.phone())
-            .status("ACTIVE")
+            .status(USER_STATUS_PENDING_ACTIVATION)
             .build();
 
-        // 分配默认角色 USER
         SysRole userRole = roleRepository.findByCode("USER")
             .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR, "默认角色不存在"));
         user.getRoles().add(userRole);
 
         user = userRepository.save(user);
 
-        log.info("User registered: username={}", user.getUsername());
-        operationLogService.log(user.getId(), null, "REGISTER", Map.of("username", user.getUsername()));
+        String rawToken = authTokenService.createActivationToken(user);
+        authMailService.sendActivationEmail(
+            user.getEmail(),
+            user.getUsername(),
+            authTokenService.buildActivationLink(rawToken)
+        );
 
-        List<String> roles = permissionService.getRoleCodesByUserId(user.getId());
-        return UserResponse.from(user, roles);
+        log.info("User registered and activation email sent: username={}", user.getUsername());
+        operationLogService.log(user.getId(), null, "REGISTER", Map.of("username", user.getUsername()));
     }
 
-    /**
-     * 用户登录
-     */
+    @Transactional(rollbackFor = Exception.class)
+    public void activate(String rawToken) {
+        AuthToken token = authTokenService.consumeValidToken(rawToken, AuthTokenType.ACTIVATION);
+        SysUser user = token.getUser();
+        user.setStatus(USER_STATUS_ACTIVE);
+        userRepository.save(user);
+
+        log.info("User activated: userId={}", user.getId());
+        operationLogService.log(user.getId(), null, "ACTIVATE_ACCOUNT", Map.of("userId", user.getId()));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void forgotPassword(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.email())
+            .filter(user -> USER_STATUS_ACTIVE.equals(user.getStatus()))
+            .ifPresent(user -> {
+                String rawToken = authTokenService.createPasswordResetToken(user);
+                authMailService.sendPasswordResetEmail(
+                    user.getEmail(),
+                    user.getUsername(),
+                    authTokenService.buildPasswordResetLink(rawToken)
+                );
+                operationLogService.log(user.getId(), null, "REQUEST_PASSWORD_RESET", Map.of("userId", user.getId()));
+            });
+    }
+
+    @Transactional(readOnly = true)
+    public void validatePasswordResetToken(String rawToken) {
+        authTokenService.getValidToken(rawToken, AuthTokenType.PASSWORD_RESET);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(ResetPasswordRequest request) {
+        AuthToken token = authTokenService.consumeValidToken(request.token(), AuthTokenType.PASSWORD_RESET);
+        SysUser user = token.getUser();
+
+        user.setPasswordHash(PasswordUtil.encode(request.newPassword()));
+        userRepository.save(user);
+        authTokenService.invalidateUnusedTokens(user.getId(), AuthTokenType.PASSWORD_RESET);
+        StpUtil.kickout(user.getId());
+
+        log.info("Password reset completed: userId={}", user.getId());
+        operationLogService.log(user.getId(), null, "RESET_PASSWORD", Map.of("userId", user.getId()));
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public UserLoginResponse login(UserLoginRequest request, String ip, String userAgent) {
-        // 查找用户
         SysUser user = userRepository.findByUsername(request.username())
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户名或密码错误"));
 
-        // 验证密码
         if (!PasswordUtil.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD, "用户名或密码错误");
         }
 
-        // 检查用户状态
+        if (USER_STATUS_PENDING_ACTIVATION.equals(user.getStatus())) {
+            throw new BusinessException(ErrorCode.USER_NOT_ACTIVATED, "账号尚未激活，请先查收邮件完成激活");
+        }
         if (!user.isActive()) {
             throw new BusinessException(ErrorCode.USER_DISABLED, "用户已被禁用");
         }
 
-        // Sa-Token 登录
         StpUtil.login(user.getId());
         String token = StpUtil.getTokenValue();
-
-        // 获取角色列表
         List<String> roles = permissionService.getRoleCodesByUserId(user.getId());
 
         log.info("User logged in: username={}, userId={}", user.getUsername(), user.getId());
@@ -110,9 +146,6 @@ public class UserService {
         return new UserLoginResponse(token, user.getId(), user.getUsername(), roles);
     }
 
-    /**
-     * 退出登录
-     */
     public void logout() {
         if (StpUtil.isLogin()) {
             long userId = StpUtil.getLoginIdAsLong();
@@ -121,28 +154,21 @@ public class UserService {
         }
     }
 
-    /**
-     * 获取当前用户信息
-     */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(readOnly = true)
     public UserResponse getCurrentUser() {
         long userId = StpUtil.getLoginIdAsLong();
         SysUser user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
         List<String> roles = permissionService.getRoleCodesByUserId(userId);
-        return UserResponse.from(user, roles);
+        return buildUserResponse(user, roles);
     }
 
-    /**
-     * 更新当前用户信息
-     */
     @Transactional(rollbackFor = Exception.class)
     public UserResponse updateCurrentUser(UserUpdateRequest request) {
         long userId = StpUtil.getLoginIdAsLong();
         SysUser user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
 
-        // 检查邮箱是否被其他用户使用
         if (request.email() != null && !request.email().isBlank()
             && !request.email().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.email())) {
@@ -151,7 +177,6 @@ public class UserService {
             user.setEmail(request.email());
         }
 
-        // 检查手机号是否被其他用户使用
         if (request.phone() != null && !request.phone().isBlank()
             && !request.phone().equals(user.getPhone())) {
             if (userRepository.existsByPhone(request.phone())) {
@@ -161,45 +186,38 @@ public class UserService {
         }
 
         if (request.avatar() != null) {
-            user.setAvatar(request.avatar());
+            user.setAvatar(normalizeAvatarValue(request.avatar()));
         }
 
         user = userRepository.save(user);
         operationLogService.log(userId, null, "UPDATE_PROFILE", null);
 
         List<String> roles = permissionService.getRoleCodesByUserId(userId);
-        return UserResponse.from(user, roles);
+        return buildUserResponse(user, roles);
     }
 
-    /**
-     * 获取用户列表（管理员）
-     */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(readOnly = true)
     public Page<UserResponse> listUsers(Pageable pageable) {
         return userRepository.findAll(pageable)
             .map(user -> {
                 List<String> roles = permissionService.getRoleCodesByUserId(user.getId());
-                return UserResponse.from(user, roles);
+                return buildUserResponse(user, roles);
             });
     }
 
-    /**
-     * 更新用户状态（管理员）
-     */
     @Transactional(rollbackFor = Exception.class)
     public void updateUserStatus(Long userId, String status) {
         SysUser user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
 
-        if (!status.equals("ACTIVE") && !status.equals("DISABLED")) {
+        if (!USER_STATUS_ACTIVE.equals(status) && !USER_STATUS_DISABLED.equals(status)) {
             throw new BusinessException(ErrorCode.INVALID_PARAM, "无效的状态值");
         }
 
         user.setStatus(status);
         userRepository.save(user);
 
-        // 如果禁用用户，强制下线
-        if ("DISABLED".equals(status)) {
+        if (USER_STATUS_DISABLED.equals(status)) {
             StpUtil.kickout(userId);
         }
 
@@ -208,14 +226,37 @@ public class UserService {
             Map.of("targetUserId", userId, "status", status));
     }
 
-    /**
-     * 根据ID获取用户
-     */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(readOnly = true)
     public UserResponse getUserById(Long userId) {
         SysUser user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "用户不存在"));
         List<String> roles = permissionService.getRoleCodesByUserId(userId);
-        return UserResponse.from(user, roles);
+        return buildUserResponse(user, roles);
+    }
+
+    private UserResponse buildUserResponse(SysUser user, List<String> roles) {
+        String avatarKey = normalizeAvatarValue(user.getAvatar());
+        String avatarUrl = cosUtil.resolveObjectUrl(avatarKey);
+        return UserResponse.from(user, roles, avatarUrl, avatarKey);
+    }
+
+    private String normalizeAvatarValue(String avatar) {
+        if (avatar == null || avatar.isBlank()) {
+            return null;
+        }
+        String normalized = cosUtil.resolveObjectKey(avatar);
+        return normalized == null || normalized.isBlank() ? null : normalized;
+    }
+
+    private void validateRegisterRequest(UserRegisterRequest request) {
+        if (userRepository.existsByUsername(request.username())) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "用户名已存在");
+        }
+        if (userRepository.existsByEmail(request.email())) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "邮箱已被使用");
+        }
+        if (request.phone() != null && !request.phone().isBlank() && userRepository.existsByPhone(request.phone())) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "手机号已被使用");
+        }
     }
 }

@@ -2,6 +2,7 @@ export interface DeviceResponse {
   deviceId: string
   model: string | null
   productKey: string
+  productIcon?: string | null
   remark: string | null
   createdAt: string
   online: boolean

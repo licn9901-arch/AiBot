@@ -37,6 +37,9 @@ public class Product {
     @Column(length = 500)
     private String description;
 
+    @Column(length = 255)
+    private String icon;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

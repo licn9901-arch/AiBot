@@ -12,6 +12,22 @@
 
     <div class="card">
       <el-table :data="products" style="width: 100%" v-loading="loading">
+        <el-table-column label="图标" width="90">
+          <template #default="{ row }">
+            <img
+              v-if="row.icon"
+              :src="row.icon"
+              alt="产品图标"
+              style="width: 40px; height: 40px; border-radius: 12px; object-fit: cover; border: 1px solid rgba(148, 163, 184, 0.24);"
+            />
+            <div
+              v-else
+              style="width: 40px; height: 40px; border-radius: 12px; background: rgba(148, 163, 184, 0.12); display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;"
+            >
+              无
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="productKey" label="产品标识" width="180" />
         <el-table-column prop="name" label="产品名称" width="180" />
         <el-table-column prop="description" label="描述" show-overflow-tooltip>
@@ -48,7 +64,7 @@
     </div>
 
     <!-- 创建/编辑产品弹窗 -->
-    <el-dialog v-model="showDialog" :title="isEdit ? '编辑产品' : '创建产品'" width="480px">
+    <el-dialog v-model="showDialog" :title="isEdit ? '编辑产品' : '创建产品'" width="560px">
       <el-form :model="form" label-width="80px">
         <el-form-item label="产品标识" required>
           <el-input v-model="form.productKey" :disabled="isEdit" placeholder="唯一标识，如 pet-v1" />
@@ -56,13 +72,43 @@
         <el-form-item label="产品名称" required>
           <el-input v-model="form.name" placeholder="产品名称" />
         </el-form-item>
+        <el-form-item label="产品图标">
+          <input
+            ref="iconInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            style="display: none"
+            @change="handleIconSelected"
+          >
+          <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <img
+              v-if="form.icon"
+              :src="form.icon"
+              alt="产品图标预览"
+              style="width: 72px; height: 72px; border-radius: 18px; object-fit: cover; border: 1px solid rgba(148, 163, 184, 0.24);"
+            />
+            <div
+              v-else
+              style="width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: rgba(148, 163, 184, 0.12); color: #94a3b8;"
+            >
+              无图标
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <el-button :loading="iconUploading" @click="triggerIconUpload">
+                {{ iconUploading ? '上传中...' : '上传图标' }}
+              </el-button>
+              <el-button v-if="form.icon" @click="clearIcon">清空</el-button>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; margin-top: 8px;">支持 JPG、PNG、WEBP、GIF，大小不超过 5MB。</div>
+        </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="可选" />
         </el-form-item>
         <el-form-item v-if="isEdit" label="状态">
           <el-select v-model="form.status" style="width: 100%">
             <el-option label="ACTIVE" value="ACTIVE" />
-            <el-option label="INACTIVE" value="INACTIVE" />
+            <el-option label="DEPRECATED" value="DEPRECATED" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -77,6 +123,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { uploadImage } from '@/api/file'
 import { getProducts, createProduct, updateProduct, deleteProduct } from '@/api/product'
 import type { ProductResponse } from '@/types/product'
 
@@ -86,11 +133,15 @@ const showDialog = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
 const editingKey = ref('')
+const iconUploading = ref(false)
+const iconInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
   productKey: '',
   name: '',
   description: '',
+  icon: '',
+  iconKey: '',
   status: 'ACTIVE'
 })
 
@@ -102,6 +153,8 @@ function resetForm() {
   form.productKey = ''
   form.name = ''
   form.description = ''
+  form.icon = ''
+  form.iconKey = ''
   form.status = 'ACTIVE'
 }
 
@@ -117,8 +170,51 @@ function openEditDialog(row: ProductResponse) {
   form.productKey = row.productKey
   form.name = row.name
   form.description = row.description || ''
+  form.icon = row.icon || ''
+  form.iconKey = row.iconKey || ''
   form.status = row.status
   showDialog.value = true
+}
+
+function triggerIconUpload() {
+  iconInput.value?.click()
+}
+
+async function handleIconSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  iconUploading.value = true
+  try {
+    const response = await uploadImage(file, 'product-icon')
+    form.icon = response.url
+    form.iconKey = response.objectKey
+    if (isEdit.value) {
+      await updateProduct(editingKey.value, {
+        icon: response.objectKey
+      })
+      const index = products.value.findIndex(item => item.productKey === editingKey.value)
+      if (index >= 0) {
+        products.value[index] = {
+          ...products.value[index],
+          icon: response.url,
+          iconKey: response.objectKey
+        }
+      }
+    }
+    ElMessage.success('图标上传成功')
+  } catch (e) {
+    console.error('Failed to upload icon', e)
+  } finally {
+    iconUploading.value = false
+    input.value = ''
+  }
+}
+
+function clearIcon() {
+  form.icon = ''
+  form.iconKey = ''
 }
 
 async function loadData() {
@@ -143,6 +239,7 @@ async function handleSubmit() {
       await updateProduct(editingKey.value, {
         name: form.name,
         description: form.description || undefined,
+        icon: form.iconKey || undefined,
         status: form.status
       })
       ElMessage.success('更新成功')
@@ -155,7 +252,8 @@ async function handleSubmit() {
       await createProduct({
         productKey: form.productKey,
         name: form.name,
-        description: form.description || undefined
+        description: form.description || undefined,
+        icon: form.iconKey || undefined
       })
       ElMessage.success('创建成功')
     }

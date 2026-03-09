@@ -12,6 +12,10 @@ public record ProductUpdateRequest(
     @Size(max = 500, message = "描述长度不能超过500")
     String description,
 
+    @Schema(description = "产品图标URL", example = "https://example.com/product-icon.png")
+    @Size(max = 255, message = "产品图标URL长度不能超过255")
+    String icon,
+
     @Schema(description = "状态（ACTIVE/DEPRECATED）", example = "ACTIVE")
     String status
 ) {}

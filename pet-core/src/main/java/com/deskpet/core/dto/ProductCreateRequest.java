@@ -17,5 +17,9 @@ public record ProductCreateRequest(
 
     @Schema(description = "产品描述", example = "第二代桌宠设备")
     @Size(max = 500, message = "描述长度不能超过500")
-    String description
+    String description,
+
+    @Schema(description = "产品图标URL", example = "https://example.com/product-icon.png")
+    @Size(max = 255, message = "产品图标URL长度不能超过255")
+    String icon
 ) {}

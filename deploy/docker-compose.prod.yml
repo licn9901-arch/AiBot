@@ -26,14 +26,14 @@ services:
     image: timescale/timescaledb:latest-pg16
     container_name: deskpet-tsdb
     environment:
-      POSTGRES_USER: ${TSDB_USER}
-      POSTGRES_PASSWORD: ${TSDB_PASSWORD}
+      POSTGRES_USER: deskpet
+      POSTGRES_PASSWORD: deskpet
       POSTGRES_DB: deskpet_ts
     ports:
-      - "5432:5433"
+      - "5433:5433"
     volumes:
       - deskpet-tsdb-data:/var/lib/postgresql/data
-      - ./timescaledb-init.sql:/docker-entrypoint-initdb.d/init.sql
+#      - ./timescaledb-init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${TSDB_USER}"]
       interval: 5s

@@ -11,6 +11,7 @@ public final class GatewayMetrics {
     private final LongAdder telemetryCount = new LongAdder();
     private final LongAdder ackCount = new LongAdder();
     private final LongAdder eventCount = new LongAdder();
+    private final LongAdder requestCount = new LongAdder();
     private final LongAdder authFailCount = new LongAdder();
     private final LongAdder authRetryCount = new LongAdder();
     private final LongAdder callbackFailCount = new LongAdder();
@@ -50,6 +51,11 @@ public final class GatewayMetrics {
     public long onEvent() {
         eventCount.increment();
         return eventCount.sum();
+    }
+
+    public long onRequest() {
+        requestCount.increment();
+        return requestCount.sum();
     }
 
     public long onAuthFail() {
@@ -110,6 +116,10 @@ public final class GatewayMetrics {
         return eventCount.sum();
     }
 
+    public long requestCount() {
+        return requestCount.sum();
+    }
+
     public long authFailCount() {
         return authFailCount.sum();
     }
@@ -146,6 +156,7 @@ public final class GatewayMetrics {
         appendCounter(sb, "deskpet_gateway_telemetry_total", telemetryCount(), "遥测上报次数");
         appendCounter(sb, "deskpet_gateway_ack_total", ackCount(), "回执次数");
         appendCounter(sb, "deskpet_gateway_event_total", eventCount(), "事件上报次数");
+        appendCounter(sb, "deskpet_gateway_request_total", requestCount(), "设备主动请求次数");
         appendCounter(sb, "deskpet_gateway_auth_fail_total", authFailCount(), "鉴权失败次数");
         appendCounter(sb, "deskpet_gateway_auth_retry_total", authRetryCount(), "鉴权重试次数");
         appendCounter(sb, "deskpet_gateway_callback_fail_total", callbackFailCount(), "回调失败次数");

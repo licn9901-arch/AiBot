@@ -18,6 +18,10 @@ public record ThingModelDTO(
     String productName,
     @Schema(description = "产品描述", example = "默认产品")
     String description,
+    @Schema(description = "产品图标URL", example = "https://example.com/product-icon.png")
+    String icon,
+    @Schema(description = "产品图标对象 key", example = "cubee/product-icons/2026/03/14/abc123.png")
+    String iconKey,
     @Schema(description = "状态（ACTIVE/DEPRECATED）", example = "ACTIVE")
     String status,
     @Schema(description = "属性列表", example = "[{\"identifier\":\"battery\",\"name\":\"电量\",\"dataType\":\"INT\",\"accessMode\":\"R\",\"required\":true}]")
@@ -31,12 +35,14 @@ public record ThingModelDTO(
     @Schema(description = "更新时间", example = "2026-01-22T10:30:00Z")
     Instant updatedAt
 ) {
-    public static ThingModelDTO from(Product product) {
+    public static ThingModelDTO from(Product product, String iconUrl, String iconKey) {
         return new ThingModelDTO(
             product.getId(),
             product.getProductKey(),
             product.getName(),
             product.getDescription(),
+            iconUrl,
+            iconKey,
             product.getStatus().name(),
             product.getProperties().stream()
                 .map(PropertyDTO::from)

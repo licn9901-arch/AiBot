@@ -69,6 +69,11 @@ public class MqttServerVerticle extends AbstractVerticle {
                 String topic = body.getString("topic");
                 String payload = body.getString("payload", "");
                 int qosValue = body.getInteger("qos", MqttQoS.AT_LEAST_ONCE.value());
+                if (!TopicAcl.isValidDownlink(deviceId, topic)) {
+                    log.warn("[MQTT] 非法下行 topic: deviceId={}, topic={}", deviceId, topic);
+                    message.reply(new JsonObject().put("ok", false).put("reason", "INVALID_TOPIC"));
+                    return;
+                }
                 MqttQoS qos = MqttQoS.valueOf(qosValue);
                 log.info("[MQTT] 发布到设备: deviceId={}, topic={}, qos={}, payloadLen={}", deviceId, topic, qos, payload.length());
                 session.endpoint().publish(topic, Buffer.buffer(payload), qos, false, false);
@@ -176,14 +181,8 @@ public class MqttServerVerticle extends AbstractVerticle {
         }
         boolean telemetry = topic.endsWith("/telemetry");
         boolean event = topic.endsWith("/event");
-        String targetPath;
-        if (telemetry) {
-            targetPath = "/internal/telemetry/";
-        } else if (event) {
-            targetPath = "/internal/event/";
-        } else {
-            targetPath = "/internal/ack/";
-        }
+        boolean request = topic.endsWith("/req");
+        String targetPath = TopicAcl.resolveCallbackPath(topic);
         String url = config.coreInternalBaseUrl() + targetPath + deviceId;
         Buffer payload = message.payload();
         long count;
@@ -191,11 +190,13 @@ public class MqttServerVerticle extends AbstractVerticle {
             count = metrics.onTelemetry();
         } else if (event) {
             count = metrics.onEvent();
+        } else if (request) {
+            count = metrics.onRequest();
         } else {
             count = metrics.onAck();
         }
         if (log.isDebugEnabled()) {
-            String type = telemetry ? "telemetry" : (event ? "event" : "ack");
+            String type = telemetry ? "telemetry" : (event ? "event" : (request ? "request" : "ack"));
             log.debug("Upstream {} received: deviceId={} count={}", type, deviceId, count);
         }
         Supplier<HttpRequest<Buffer>> requestSupplier = () -> {
@@ -222,13 +223,11 @@ public class MqttServerVerticle extends AbstractVerticle {
     }
 
     private boolean isValidSubscribe(String deviceId, String topic) {
-        return topic.equals("pet/" + deviceId + "/cmd");
+        return TopicAcl.isValidSubscribe(deviceId, topic);
     }
 
     private boolean isValidPublish(String deviceId, String topic) {
-        return topic.equals("pet/" + deviceId + "/telemetry")
-            || topic.equals("pet/" + deviceId + "/cmd/ack")
-            || topic.equals("pet/" + deviceId + "/event");
+        return TopicAcl.isValidPublish(deviceId, topic);
     }
 
     private void notifyPresence(String deviceId, String ip, boolean online) {

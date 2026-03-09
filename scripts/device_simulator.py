@@ -3,6 +3,7 @@ import json
 import random
 import threading
 import time
+import uuid
 
 import paho.mqtt.client as mqtt
 
@@ -31,11 +32,13 @@ class DeviceSimulator:
         self.client.on_disconnect = self.on_disconnect
         self.client.reconnect_delay_set(min_delay=1, max_delay=10)
         self.running = True
+        self.pending_requests = set()
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             print(f"[info] connected: deviceId={self.device_id}")
             client.subscribe(f"pet/{self.device_id}/cmd", qos=1)
+            client.subscribe(f"pet/{self.device_id}/resp", qos=1)
         else:
             print(f"[warn] connect failed: rc={rc}")
 
@@ -45,6 +48,10 @@ class DeviceSimulator:
         print(f"[warn] disconnected: rc={rc}")
 
     def on_message(self, client, userdata, msg):
+        if msg.topic.endswith("/resp"):
+            self.handle_response_message(msg)
+            return
+
         try:
             payload = msg.payload.decode("utf-8")
             data = json.loads(payload)
@@ -72,11 +79,46 @@ class DeviceSimulator:
             time.sleep(self.args.ack_delay_ms / 1000.0)
         self.client.publish(f"pet/{self.device_id}/cmd/ack", json.dumps(ack), qos=1)
 
+    def handle_response_message(self, msg):
+        try:
+            payload = json.loads(msg.payload.decode("utf-8"))
+            req_id = payload.get("reqId")
+            if req_id in self.pending_requests:
+                self.pending_requests.remove(req_id)
+            print(f"[resp] topic={msg.topic} payload={json.dumps(payload, ensure_ascii=False)}")
+        except Exception as ex:
+            print(f"[warn] invalid response payload: {ex}")
+
     def telemetry_loop(self):
         while self.running:
             telemetry = build_telemetry(self.args.schema_version, self.last_action)
             self.client.publish(f"pet/{self.device_id}/telemetry", json.dumps(telemetry), qos=0)
             time.sleep(self.args.telemetry_interval)
+
+    def request_loop(self):
+        if self.args.request_interval <= 0:
+            return
+        while self.running:
+            time.sleep(self.args.request_interval)
+            if not self.running:
+                return
+            self.publish_weather_request()
+
+    def publish_weather_request(self):
+        req_id = f"weather-{uuid.uuid4()}"
+        self.pending_requests.add(req_id)
+        payload = {
+            "schemaVersion": self.args.schema_version,
+            "reqId": req_id,
+            "type": "getWeather",
+            "ts": int(time.time()),
+            "payload": {
+                "location": self.args.request_location,
+                "days": self.args.request_days,
+            },
+        }
+        self.client.publish(f"pet/{self.device_id}/req", json.dumps(payload), qos=1)
+        print(f"[req] published getWeather reqId={req_id} location={self.args.request_location}")
 
     def reconnect_loop(self):
         if self.args.reconnect_interval <= 0:
@@ -104,6 +146,9 @@ class DeviceSimulator:
         reconnect_thread = threading.Thread(target=self.reconnect_loop, daemon=True)
         reconnect_thread.start()
 
+        request_thread = threading.Thread(target=self.request_loop, daemon=True)
+        request_thread.start()
+
         try:
             while True:
                 time.sleep(1)
@@ -124,6 +169,9 @@ def parse_args():
     parser.add_argument("--schema-version", type=int, default=1, help="协议版本")
     parser.add_argument("--reconnect-interval", type=int, default=0, help="断线重连周期(秒)")
     parser.add_argument("--reconnect-down-seconds", type=int, default=3, help="断开后重连等待(秒)")
+    parser.add_argument("--request-interval", type=int, default=0, help="主动请求天气的周期(秒)，0 表示关闭")
+    parser.add_argument("--request-location", default="Shanghai", help="天气请求的城市")
+    parser.add_argument("--request-days", type=int, default=1, help="天气请求天数")
     return parser.parse_args()
 
 

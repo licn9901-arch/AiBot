@@ -33,8 +33,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.qq.com}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME:cubee_ai@foxmail.com}
-    password: ${MAIL_PASSWORD:vdkgltpdbeasbihd}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail.transport.protocol: smtp
       mail:

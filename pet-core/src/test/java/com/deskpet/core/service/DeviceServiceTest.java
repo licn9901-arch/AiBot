@@ -71,4 +71,23 @@ class DeviceServiceTest {
         assertThat(responses.get(0).productIcon()).isEqualTo("https://cdn.example.com/product-icons/pet.png");
         assertThat(responses.get(0).productKey()).isEqualTo("deskpet-v1");
     }
+
+    @Test
+    void findByIds_returnsNullProductIconWhenProductIconIsMissing() {
+        Device device = new Device("pet-001", "hash", "salt", "deskpet", "deskpet-v1", 10L, "demo", Instant.now());
+        Product product = Product.builder()
+                .id(10L)
+                .productKey("deskpet-v1")
+                .name("DeskPet")
+                .icon(null)
+                .build();
+        when(deviceRepository.findAllById(List.of("pet-001"))).thenReturn(List.of(device));
+        when(productRepository.findAllById(anyIterable())).thenReturn(List.of(product));
+
+        List<DeviceResponse> responses = deviceService.findByIds(List.of("pet-001"));
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).productIcon()).isNull();
+        assertThat(responses.get(0).productKey()).isEqualTo("deskpet-v1");
+    }
 }

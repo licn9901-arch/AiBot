@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -174,7 +175,10 @@ public class DeviceService {
             return Map.of();
         }
         return productRepository.findAllById(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, product -> cosUtil.resolveObjectUrl(product.getIcon())));
+                .filter(product -> product.getId() != null)
+                .map(product -> new AbstractMap.SimpleEntry<>(product.getId(), cosUtil.resolveObjectUrl(product.getIcon())))
+                .filter(entry -> entry.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private String resolveProductIcon(Map<Long, String> productIconMap, Long productId) {

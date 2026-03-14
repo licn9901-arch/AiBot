@@ -2,11 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CachedImage from '@/components/ui/CachedImage.vue'
+import { useResponsive } from '@/composables/useResponsive'
 import { useDeviceStore } from '@/stores/device'
 import { useUserStore } from '@/stores/user'
 import { formatRelativeTime } from '@/utils/format'
 
 const router = useRouter()
+const { isMobile } = useResponsive()
 const userStore = useUserStore()
 const deviceStore = useDeviceStore()
 const refreshing = ref(false)
@@ -45,6 +47,8 @@ const stats = computed(() => [
   { label: '最近新增', value: `+${recentAddedCount.value}`, tone: 'accent', status: 'recent' },
 ])
 
+const mobileStats = computed(() => stats.value.slice(0, 3))
+
 async function refreshData() {
   if (refreshing.value) {
     return
@@ -63,7 +67,72 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="home-page">
+  <div v-if="isMobile" class="mobile-home-page">
+    <section class="mobile-hero-card">
+      <div class="mobile-hero-kicker">今日概览</div>
+      <h1 class="mobile-hero-title">你好，{{ username }} 👋</h1>
+      <p class="mobile-hero-description">智慧生活，尽在掌控。查看状态与最近动态。</p>
+      <button type="button" class="mobile-hero-button" @click="router.push('/devices')">管理设备 →</button>
+    </section>
+
+    <section class="mobile-home-stats">
+      <article
+        v-for="stat in mobileStats"
+        :key="stat.label"
+        class="mobile-stat-card"
+        @click="router.push(stat.status === 'all' ? '/devices' : { path: '/devices', query: { status: stat.status } })"
+      >
+        <div class="mobile-stat-label" :class="`is-${stat.tone}`">{{ stat.label }}</div>
+        <div class="mobile-stat-value">{{ stat.value }}</div>
+        <div class="mobile-stat-foot">{{ stat.status === 'all' ? '全部设备' : stat.status === 'online' ? '运行稳定' : '等待恢复' }}</div>
+      </article>
+    </section>
+
+    <section class="mobile-section-block">
+      <div class="mobile-section-head">
+        <h2 class="mobile-section-title">最近设备</h2>
+        <button type="button" class="mobile-section-link" @click="router.push('/devices')">查看全部</button>
+      </div>
+
+      <div v-if="recentDevices.length === 0" class="mobile-empty-card">
+        <div class="ui-empty-emoji">□</div>
+        <div>当前还没有已激活设备，先去完成授权激活吧。</div>
+        <button type="button" class="ui-button primary" @click="router.push('/activate')">前往激活</button>
+      </div>
+
+      <div v-else class="mobile-recent-list">
+        <article
+          v-for="device in recentDevices"
+          :key="device.deviceId"
+          class="mobile-recent-card"
+          @click="router.push(`/devices/${device.deviceId}`)"
+        >
+          <div class="mobile-recent-icon" :class="device.online ? 'is-online' : 'is-offline'">
+            <CachedImage
+              v-if="device.productIcon"
+              :src="device.productIcon"
+              :cache-key="`product-icon:${device.productKey}`"
+              :alt="device.title"
+              class="home-device-image"
+            >
+              <template #fallback>
+                <span>🤖</span>
+              </template>
+            </CachedImage>
+            <span v-else>🤖</span>
+          </div>
+          <div class="mobile-recent-copy">
+            <div class="mobile-recent-name">{{ device.title }}</div>
+            <div class="mobile-recent-subtitle">{{ device.subtitle }}</div>
+            <div class="mobile-recent-status" :class="device.online ? 'is-online' : 'is-offline'">{{ device.statusText }}</div>
+          </div>
+          <div class="mobile-status-pill" :class="device.online ? 'is-online' : 'is-offline'">{{ device.online ? '在线' : '离线' }}</div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <div v-else class="home-page">
     <section class="home-hero">
       <div class="home-hero-kicker">今日概览</div>
       <h1 class="home-hero-title">你好，{{ username }} 👋</h1>

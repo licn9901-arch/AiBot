@@ -47,13 +47,45 @@ const authHero = computed(() => {
       }
   }
 })
+
+const mobileHeaderSubtitle = computed(() => {
+  switch (route.name) {
+    case 'register':
+      return '创建账号，开始你的 Cubee 体验'
+    case 'forgot-password':
+      return '重置密码，重新找回你的登录权限'
+    case 'reset-password':
+      return '设置新密码，继续返回你的 Cubee 空间'
+    case 'check-email':
+      return '账号与功能提醒，请查看邮箱'
+    case 'account-activate':
+      return '账号激活确认，请稍候完成验证'
+    default:
+      return '欢迎回来，继续管理你的桌宠设备'
+  }
+})
 </script>
 
 <template>
-  <div class="auth-shell">
+  <div v-if="isMobile" class="mobile-auth-shell">
+    <header class="mobile-topbar mobile-auth-header">
+      <div class="mobile-brand-row">
+        <div class="mobile-brand-copy">
+          <div class="mobile-brand-title">Cubee</div>
+          <div class="mobile-brand-subtitle">{{ mobileHeaderSubtitle }}</div>
+        </div>
+        <div class="mobile-brand-action mobile-brand-action-static">✦</div>
+      </div>
+    </header>
+
+    <main class="mobile-auth-main">
+      <RouterView />
+    </main>
+  </div>
+
+  <div v-else class="auth-shell">
     <div class="auth-card">
       <AuthHeroPanel
-        v-if="!isMobile"
         :title="authHero.title"
         :description="authHero.description"
         :bullets="authHero.bullets"

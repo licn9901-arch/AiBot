@@ -159,7 +159,155 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="control-page">
+  <div v-if="isMobile" class="mobile-control-page">
+    <div v-if="loading" class="mobile-empty-card">
+      <div class="ui-empty-emoji">⏳</div>
+      <div>正在载入设备信息...</div>
+    </div>
+
+    <template v-else-if="device">
+      <section class="mobile-control-hero" :class="isOffline ? 'is-offline' : ''">
+        <div class="mobile-control-hero-top">
+          <div class="mobile-control-icon">
+            <CachedImage
+              v-if="device.productIcon"
+              :src="device.productIcon"
+              :cache-key="productIconCacheKey"
+              :alt="deviceName"
+              class="control-hero-image"
+            >
+              <template #fallback>
+                <span>🤖</span>
+              </template>
+            </CachedImage>
+            <span v-else>🤖</span>
+          </div>
+          <div class="mobile-control-copy">
+            <h1 class="mobile-control-title">{{ deviceName }}</h1>
+            <div class="mobile-control-subtitle">{{ isOffline ? '设备离线状态控制' : '实时控制台 · 云台联动' }}</div>
+            <div class="mobile-control-meta">{{ deviceSubtitle }}</div>
+          </div>
+        </div>
+        <div class="mobile-control-status-row">
+          <span class="mobile-status-pill" :class="device.online ? 'is-online' : 'is-offline'">{{ device.online ? '在线' : '离线' }}</span>
+          <span class="mobile-control-chip">{{ device.productKey || 'cubee-v1' }}</span>
+        </div>
+      </section>
+
+      <section class="mobile-panel-card">
+        <div class="mobile-note-title">工作模式</div>
+        <div class="mobile-mode-row">
+          <button
+            type="button"
+            class="mobile-mode-pill"
+            :class="selectedWorkMode === 'sleep' ? 'is-active' : ''"
+            :disabled="workModeLoading || isOffline"
+            @click="handleWorkModeToggle('sleep')"
+          >
+            睡眠模式
+          </button>
+          <button
+            type="button"
+            class="mobile-mode-pill"
+            :class="selectedWorkMode === 'curious' ? 'is-active' : ''"
+            :disabled="workModeLoading || isOffline"
+            @click="handleWorkModeToggle('curious')"
+          >
+            好奇模式
+          </button>
+        </div>
+      </section>
+
+      <section class="mobile-panel-card">
+        <div class="mobile-control-section-head">
+          <div class="mobile-note-title">摇杆控制</div>
+          <div class="mobile-control-tip">{{ isOffline ? '设备离线，暂不可控制' : '长按方向移动，松开自动停止' }}</div>
+        </div>
+        <div class="mobile-joystick-wrap">
+          <div
+            class="control-joystick"
+            :class="[activeDirection ? `is-${activeDirection}` : '', isOffline ? 'is-offline' : '']"
+            @contextmenu.prevent
+          >
+            <div class="control-joystick-segment top" />
+            <div class="control-joystick-segment right" />
+            <div class="control-joystick-segment bottom" />
+            <div class="control-joystick-segment left" />
+            <div class="control-joystick-line control-joystick-line-vertical" />
+            <div class="control-joystick-line control-joystick-line-horizontal" />
+
+            <button
+              type="button"
+              class="control-joystick-button up"
+              :class="activeDirection === 'forward' ? 'is-active' : ''"
+              :disabled="isOffline"
+              @pointerdown.prevent="handleDirectionPress($event, 'forward')"
+              @pointerup.prevent="handleDirectionRelease"
+              @pointercancel="handleDirectionRelease"
+              @pointerleave="handleDirectionRelease"
+              @lostpointercapture="handleDirectionRelease"
+              @contextmenu.prevent
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="control-joystick-button left"
+              :class="activeDirection === 'left' ? 'is-active' : ''"
+              :disabled="isOffline"
+              @pointerdown.prevent="handleDirectionPress($event, 'left')"
+              @pointerup.prevent="handleDirectionRelease"
+              @pointercancel="handleDirectionRelease"
+              @pointerleave="handleDirectionRelease"
+              @lostpointercapture="handleDirectionRelease"
+              @contextmenu.prevent
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              class="control-joystick-button center"
+              :disabled="isOffline"
+              @click="handleCenterStop"
+              @contextmenu.prevent
+            >
+              <span class="sr-only">停止</span>
+            </button>
+            <button
+              type="button"
+              class="control-joystick-button right"
+              :class="activeDirection === 'right' ? 'is-active' : ''"
+              :disabled="isOffline"
+              @pointerdown.prevent="handleDirectionPress($event, 'right')"
+              @pointerup.prevent="handleDirectionRelease"
+              @pointercancel="handleDirectionRelease"
+              @pointerleave="handleDirectionRelease"
+              @lostpointercapture="handleDirectionRelease"
+              @contextmenu.prevent
+            >
+              →
+            </button>
+            <button
+              type="button"
+              class="control-joystick-button down"
+              :class="activeDirection === 'backward' ? 'is-active' : ''"
+              :disabled="isOffline"
+              @pointerdown.prevent="handleDirectionPress($event, 'backward')"
+              @pointerup.prevent="handleDirectionRelease"
+              @pointercancel="handleDirectionRelease"
+              @pointerleave="handleDirectionRelease"
+              @lostpointercapture="handleDirectionRelease"
+              @contextmenu.prevent
+            >
+              ↓
+            </button>
+          </div>
+        </div>
+      </section>
+    </template>
+  </div>
+
+  <div v-else class="control-page">
     <section class="control-header">
       <div class="control-header-copy">
         <h1 class="control-title">{{ pageTitle }}</h1>

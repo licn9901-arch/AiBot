@@ -24,9 +24,32 @@ const activeName = computed(() => {
   return matched?.name ?? 'home'
 })
 
+const mobileActiveName = computed(() => {
+  if (route.name === 'device-control') {
+    return ''
+  }
+
+  const matched = navItems.find((item) => item.name === route.name)
+  return matched?.name ?? ''
+})
+
 const userDisplayName = computed(() => userStore.userInfo?.username || '用户')
 const userSubtitle = computed(() => userStore.userInfo?.email || '连接你的 Cubee 设备')
 const userInitial = computed(() => userDisplayName.value.trim().charAt(0).toUpperCase() || 'C')
+const mobileSectionLabel = computed(() => {
+  switch (route.name) {
+    case 'devices':
+      return '统一设备管理'
+    case 'device-control':
+      return '设备实时控制'
+    case 'activate':
+      return '设备授权与激活'
+    case 'profile':
+      return '个人资料与授权码'
+    default:
+      return '设备状态总览'
+  }
+})
 const onlineRatio = computed(() => {
   if (deviceStore.devices.length === 0) return '0%'
   return `${Math.round((deviceStore.devices.filter((item) => item.online).length / deviceStore.devices.length) * 100)}%`
@@ -86,13 +109,13 @@ onMounted(async () => {
   </div>
 
   <div v-else class="mobile-shell">
-    <header class="mobile-topbar">
-      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
-        <div>
-          <div style="font-size: 34px; line-height: 1; color: var(--text-tertiary); margin-bottom: 10px;">9:41</div>
-          <AppBrand :subtitle="`${userDisplayName} · 设备状态总览`" compact />
+    <header class="mobile-topbar mobile-app-header">
+      <div class="mobile-brand-row">
+        <div class="mobile-brand-copy">
+          <div class="mobile-brand-title">Cubee</div>
+          <div class="mobile-brand-subtitle">{{ userDisplayName }} · {{ mobileSectionLabel }}</div>
         </div>
-        <button type="button" class="ui-icon-button ui-button" @click="goTo('/profile')">↗</button>
+        <button type="button" class="mobile-brand-action" @click="goTo('/profile')">↗</button>
       </div>
     </header>
 
@@ -107,13 +130,12 @@ onMounted(async () => {
           :key="item.name"
           type="button"
           class="mobile-tabbar-item"
-          :class="activeName === item.name ? 'active' : ''"
+          :class="mobileActiveName === item.name ? 'active' : ''"
           @click="goTo(item.path)"
         >
           <span style="font-size: 16px; line-height: 1;">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </button>
-        <button type="button" class="mobile-tabbar-fab" @click="goTo('/devices')">⋯</button>
       </nav>
     </div>
   </div>

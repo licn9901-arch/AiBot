@@ -90,7 +90,45 @@ onMounted(checkToken)
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-auth-page">
+    <section class="mobile-auth-hero is-forgot">
+      <div class="mobile-auth-kicker">重置密码</div>
+      <h1 class="mobile-auth-hero-title">{{ checking ? '正在验证链接' : tokenValid ? '设置新的登录密码' : '重置链接不可用' }}</h1>
+      <p class="mobile-auth-hero-description">
+        <template v-if="checking">请稍候，我们正在确认该重置链接是否仍然有效。</template>
+        <template v-else-if="tokenValid">请输入新的登录密码，提交后将立即生效。</template>
+        <template v-else>{{ errorMessage }}</template>
+      </p>
+    </section>
+
+    <section v-if="tokenValid" class="mobile-auth-card">
+      <div class="mobile-auth-card-title">设置密码</div>
+      <form class="mobile-form-stack" @submit.prevent="handleSubmit">
+        <div class="ui-field">
+          <label class="ui-field-label" for="reset-password-mobile">新密码</label>
+          <input id="reset-password-mobile" v-model="form.password" class="ui-input mobile-auth-input" type="password" placeholder="请输入新密码">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="reset-confirm-password-mobile">确认新密码</label>
+          <input id="reset-confirm-password-mobile" v-model="form.confirmPassword" class="ui-input mobile-auth-input" type="password" placeholder="请再次输入新密码">
+        </div>
+        <button type="submit" class="mobile-submit-button" :disabled="submitting">
+          {{ submitting ? '提交中...' : '确认重置密码' }}
+        </button>
+      </form>
+    </section>
+
+    <section v-else-if="!checking" class="mobile-auth-note-card">
+      <div class="mobile-note-title">建议操作</div>
+      <p class="mobile-note-text">你可以重新填写邮箱申请新的重置邮件，或者返回登录页尝试使用已有密码登录。</p>
+      <div class="mobile-profile-inline-actions">
+        <RouterLink to="/auth/forgot-password" class="mobile-inline-link">重新申请</RouterLink>
+        <RouterLink to="/auth/login" class="mobile-inline-link">返回登录</RouterLink>
+      </div>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <div>
       <div class="ui-kicker">重置密码</div>
       <h2 style="margin: 12px 0 0; font-size: 32px; line-height: 1.2; letter-spacing: -0.03em;">

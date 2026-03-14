@@ -13,6 +13,7 @@ const { isMobile } = useResponsive()
 const code = ref('')
 const loading = ref(false)
 const result = ref<LicenseCodeResponse | null>(null)
+const errorMessage = ref('')
 
 function notify(message: string, type: 'success' | 'warning' | 'error' = 'success') {
   if (isMobile.value) {
@@ -33,11 +34,13 @@ async function handleActivate() {
 
   loading.value = true
   result.value = null
+  errorMessage.value = ''
   try {
     result.value = await activateLicense({ code: code.value.trim() })
     notify('授权激活成功')
     code.value = ''
   } catch {
+    errorMessage.value = '授权码校验失败，请检查输入格式或稍后重试。'
     notify('激活失败，请稍后重试', 'error')
   } finally {
     loading.value = false
@@ -46,7 +49,57 @@ async function handleActivate() {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-activate-page">
+    <section class="mobile-title-stack">
+      <h1 class="mobile-page-title">激活授权码</h1>
+      <p class="mobile-page-description">输入授权码后立即为新设备开通服务权限。</p>
+    </section>
+
+    <section class="mobile-panel-card">
+      <form class="mobile-form-stack" @submit.prevent="handleActivate">
+        <div class="ui-field">
+          <label class="ui-field-label" for="license-code-mobile">授权码</label>
+          <input
+            id="license-code-mobile"
+            v-model="code"
+            class="ui-input mobile-auth-input"
+            type="text"
+            placeholder="DKPT-XXXX-XXXX-XXXX"
+            autocomplete="off"
+          >
+          <div class="ui-field-help">输入格式：DKPT-XXXX-XXXX-XXXX</div>
+        </div>
+        <button type="submit" class="mobile-submit-button" :disabled="loading">
+          {{ loading ? '激活中...' : '立即激活' }}
+        </button>
+      </form>
+
+      <div v-if="result" class="mobile-feedback-card is-success">
+        <div class="mobile-feedback-icon">✓</div>
+        <div>
+          <strong>激活成功</strong>
+          <div class="mobile-feedback-text">设备权限已生效，可前往设备查看。</div>
+        </div>
+      </div>
+
+      <div v-else-if="errorMessage" class="mobile-feedback-card is-danger">
+        <div class="mobile-feedback-icon">!</div>
+        <div>
+          <strong>授权码无效</strong>
+          <div class="mobile-feedback-text">{{ errorMessage }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mobile-panel-card mobile-note-card">
+      <h2 class="mobile-note-title">激活说明</h2>
+      <p class="mobile-note-text">· 新设备首次绑定后需输入授权码</p>
+      <p class="mobile-note-text">· 授权码区分账号权限，支持重复查看</p>
+      <p class="mobile-note-text">· 激活后可在“我的授权码”中追踪状态</p>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <section class="page-title-block">
       <div>
         <h1 class="page-title">激活授权码</h1>

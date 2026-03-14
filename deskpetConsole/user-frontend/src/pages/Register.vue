@@ -65,7 +65,55 @@ async function handleRegister() {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-auth-page">
+    <section class="mobile-auth-hero is-register">
+      <div class="mobile-auth-kicker">账号注册</div>
+      <h1 class="mobile-auth-hero-title">用邮箱创建新的 Cubee 账号</h1>
+      <p class="mobile-auth-hero-description">注册成功后，我们会向你的邮箱发送激活提醒邮件。</p>
+    </section>
+
+    <section class="mobile-auth-card">
+      <div class="mobile-auth-card-title">注册</div>
+      <form class="mobile-form-stack" @submit.prevent="handleRegister">
+        <div class="ui-field">
+          <label class="ui-field-label" for="register-username-mobile">用户名</label>
+          <input id="register-username-mobile" v-model="form.username" class="ui-input mobile-auth-input" type="text" placeholder="请输入用户名">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="register-email-mobile">邮箱</label>
+          <input id="register-email-mobile" v-model="form.email" class="ui-input mobile-auth-input" type="email" placeholder="请输入常用邮箱">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="register-password-mobile">密码</label>
+          <input id="register-password-mobile" v-model="form.password" class="ui-input mobile-auth-input" type="password" placeholder="设置 8 位以上密码">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="register-confirm-mobile">确认密码</label>
+          <input id="register-confirm-mobile" v-model="form.confirmPassword" class="ui-input mobile-auth-input" type="password" placeholder="再次输入密码">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="register-phone-mobile">手机号</label>
+          <input id="register-phone-mobile" v-model="form.phone" class="ui-input mobile-auth-input" type="tel" placeholder="请输入手机号（可选）">
+        </div>
+        <button type="submit" class="mobile-submit-button" :disabled="loading">
+          {{ loading ? '注册中...' : '创建账号' }}
+        </button>
+        <p class="mobile-auth-footnote">
+          已经有账号？
+          <RouterLink to="/auth/login" class="mobile-inline-link">返回登录</RouterLink>
+        </p>
+      </form>
+    </section>
+
+    <section class="mobile-auth-note-card">
+      <div class="mobile-note-title">注册说明</div>
+      <p class="mobile-note-text">· 注册后需前往邮箱查看提醒邮件</p>
+      <p class="mobile-note-text">· 请优先使用可正常接收邮件的邮箱</p>
+      <p class="mobile-note-text">· 完成邮箱确认后即可管理账号与功能</p>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <div>
       <div class="ui-kicker">注册</div>
       <h2 style="margin: 12px 0 0; font-size: 32px; line-height: 1.2; letter-spacing: -0.03em;">创建你的 Cubee 账号</h2>

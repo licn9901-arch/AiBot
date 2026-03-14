@@ -51,7 +51,39 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-auth-page">
+    <section class="mobile-auth-hero is-forgot">
+      <div class="mobile-auth-kicker">忘记密码</div>
+      <h1 class="mobile-auth-hero-title">通过邮箱直接收取重置链接</h1>
+      <p class="mobile-auth-hero-description">输入注册邮箱后，我们将发送密码重置邮件。</p>
+    </section>
+
+    <section class="mobile-auth-card">
+      <div class="mobile-auth-card-title">找回密码</div>
+      <form class="mobile-form-stack" @submit.prevent="handleSubmit">
+        <div class="ui-field">
+          <label class="ui-field-label" for="forgot-email-mobile">邮箱</label>
+          <input id="forgot-email-mobile" v-model="form.email" class="ui-input mobile-auth-input" type="email" placeholder="请输入注册邮箱">
+        </div>
+        <button type="submit" class="mobile-submit-button" :disabled="loading">
+          {{ loading ? '提交中...' : '发送重置邮件' }}
+        </button>
+        <p class="mobile-auth-footnote">
+          想起来密码了？
+          <RouterLink to="/auth/login" class="mobile-inline-link">返回登录</RouterLink>
+        </p>
+      </form>
+    </section>
+
+    <section class="mobile-auth-note-card">
+      <div class="mobile-note-title">找回说明</div>
+      <p class="mobile-note-text">· 仅支持通过注册邮箱找回密码</p>
+      <p class="mobile-note-text">· 若长时间未收到邮件，请检查垃圾邮箱</p>
+      <p class="mobile-note-text">· 重置链接具备时效性与唯一性</p>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <div>
       <div class="ui-kicker">找回密码</div>
       <h2 style="margin: 12px 0 0; font-size: 32px; line-height: 1.2; letter-spacing: -0.03em;">通过邮箱重置密码</h2>

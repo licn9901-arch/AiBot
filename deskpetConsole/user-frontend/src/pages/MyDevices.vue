@@ -3,11 +3,13 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CachedImage from '@/components/ui/CachedImage.vue'
 import { usePolling } from '@/composables/usePolling'
+import { useResponsive } from '@/composables/useResponsive'
 import { useDeviceStore } from '@/stores/device'
 import { formatRelativeTime } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
+const { isMobile } = useResponsive()
 const deviceStore = useDeviceStore()
 
 const filters = [
@@ -44,6 +46,17 @@ const deviceCards = computed(() =>
   })),
 )
 
+const mobileDeviceCards = computed(() =>
+  filteredDevices.value.map((device, index) => ({
+    ...device,
+    title: device.remark || device.model || device.deviceId,
+    deviceLine: `设备 ID · ${device.deviceId}`,
+    lastSeenText: `最后在线：${formatRelativeTime(device.lastSeen)}`,
+    statusLabel: device.online ? '在线' : '离线',
+    topLabel: index === 0 ? '置顶设备' : '暂未分组',
+  })),
+)
+
 function updateFilter(status: 'all' | 'online' | 'offline') {
   router.replace({ path: '/devices', query: status === 'all' ? {} : { status } })
 }
@@ -68,7 +81,92 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="devices-page">
+  <div v-if="isMobile" class="mobile-devices-page">
+    <section class="mobile-page-heading">
+      <div>
+        <h1 class="mobile-page-title">我的设备</h1>
+      </div>
+      <button type="button" class="mobile-inline-button" @click="refreshDevices">
+        {{ deviceStore.loading ? '刷新中' : '↻ 刷新' }}
+      </button>
+    </section>
+
+    <section class="mobile-filter-shell">
+      <button
+        v-for="filter in filters"
+        :key="filter.value"
+        type="button"
+        class="mobile-filter-pill"
+        :class="[activeFilter === filter.value ? 'is-active' : '', `is-${filter.value}`]"
+        @click="updateFilter(filter.value)"
+      >
+        {{ filter.label }}
+      </button>
+    </section>
+
+    <section v-if="deviceStore.loading && mobileDeviceCards.length === 0" class="mobile-empty-card">
+      <div class="ui-empty-emoji">⏳</div>
+      <div>正在拉取你的设备列表...</div>
+    </section>
+
+    <template v-else>
+      <section v-if="mobileDeviceCards.length > 0" class="mobile-group-row">
+        <span class="mobile-group-label">未分组</span>
+        <span class="mobile-group-count">{{ mobileDeviceCards.length }} 台设备</span>
+      </section>
+
+      <section v-if="mobileDeviceCards.length === 0" class="mobile-empty-card">
+        <div class="ui-empty-emoji">📭</div>
+        <div>当前筛选下没有设备，试试切换筛选或前往添加设备。</div>
+        <button type="button" class="ui-button primary" @click="goToActivate">去添加</button>
+      </section>
+
+      <section v-else class="mobile-device-list">
+        <article
+          v-for="card in mobileDeviceCards"
+          :key="card.deviceId"
+          class="mobile-device-card"
+          @click="openDevice(card.deviceId)"
+        >
+          <div class="mobile-device-card-top">
+            <span class="mobile-device-tag">{{ card.topLabel }}</span>
+            <button type="button" class="mobile-device-more" @click.stop>⋯</button>
+          </div>
+          <div class="mobile-device-card-main">
+            <div class="mobile-device-icon" :class="card.online ? 'is-online' : 'is-offline'">
+              <CachedImage
+                v-if="card.productIcon"
+                :src="card.productIcon"
+                :cache-key="`product-icon:${card.productKey}`"
+                :alt="card.title"
+                class="devices-card-image"
+              >
+                <template #fallback>
+                  <span>🤖</span>
+                </template>
+              </CachedImage>
+              <span v-else>🤖</span>
+            </div>
+            <div class="mobile-device-copy">
+              <div class="mobile-device-title-row">
+                <h2 class="mobile-device-title">{{ card.title }}</h2>
+                <span class="mobile-status-pill" :class="card.online ? 'is-online' : 'is-offline'">{{ card.statusLabel }}</span>
+              </div>
+              <div class="mobile-device-meta">{{ card.deviceLine }}</div>
+              <div class="mobile-device-meta">{{ card.lastSeenText }}</div>
+            </div>
+          </div>
+          <div class="mobile-device-actions">
+            <button type="button" class="mobile-device-action" @click.stop="openDevice(card.deviceId)">
+              {{ card.online ? '置顶中' : '置顶' }}
+            </button>
+          </div>
+        </article>
+      </section>
+    </template>
+  </div>
+
+  <div v-else class="devices-page">
     <section class="devices-header">
       <div class="devices-header-copy">
         <h1 class="devices-title">设备管理</h1>

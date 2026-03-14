@@ -145,7 +145,103 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-profile-page">
+    <section class="mobile-page-heading">
+      <div>
+        <h1 class="mobile-page-title">个人中心</h1>
+      </div>
+      <button type="button" class="mobile-inline-button" @click="fetchLicenses">
+        {{ loading ? '刷新中' : '刷新授权码' }}
+      </button>
+    </section>
+
+    <section class="mobile-panel-card mobile-profile-card">
+      <form class="mobile-form-stack" @submit.prevent="saveProfile">
+        <input
+          ref="avatarInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          style="display: none"
+          @change="handleAvatarSelected"
+        >
+        <button type="button" class="mobile-profile-summary mobile-profile-summary-trigger" :disabled="avatarUploading" @click="triggerAvatarUpload">
+          <div class="mobile-profile-avatar">
+            <img
+              v-if="localAvatarPreviewUrl"
+              :src="localAvatarPreviewUrl"
+              alt="头像预览"
+              class="mobile-profile-avatar-image"
+            >
+            <CachedImage
+              v-else-if="editForm.avatarUrl && editForm.avatarKey"
+              :src="editForm.avatarUrl"
+              :cache-key="`avatar:${editForm.avatarKey}`"
+              alt="头像预览"
+              class="mobile-profile-avatar-image"
+            >
+              <template #fallback>
+                <span>{{ userSummary?.username?.charAt(0).toUpperCase() || 'C' }}</span>
+              </template>
+            </CachedImage>
+            <span v-else>{{ userSummary?.username?.charAt(0).toUpperCase() || 'C' }}</span>
+          </div>
+          <div class="mobile-profile-summary-copy">
+            <div class="mobile-profile-name">{{ userSummary?.username || 'Cubee 主账号' }}</div>
+            <div class="mobile-profile-subtitle">{{ avatarUploading ? '头像上传中...' : '点击头像更换图片' }}</div>
+          </div>
+        </button>
+
+        <div class="ui-field">
+          <label class="ui-field-label" for="mobile-profile-email">邮箱</label>
+          <input id="mobile-profile-email" v-model="editForm.email" class="ui-input mobile-auth-input" type="email" placeholder="请输入邮箱地址">
+        </div>
+        <div class="ui-field">
+          <label class="ui-field-label" for="mobile-profile-phone">手机号</label>
+          <input id="mobile-profile-phone" v-model="editForm.phone" class="ui-input mobile-auth-input" type="tel" placeholder="请输入手机号">
+        </div>
+        <div v-if="editForm.avatarUrl" class="mobile-profile-inline-actions">
+          <button type="button" class="mobile-secondary-button" @click="clearAvatar">清空头像</button>
+        </div>
+
+        <button type="submit" class="mobile-submit-button" :disabled="saving">
+          {{ saving ? '保存中...' : '保存资料' }}
+        </button>
+
+        <div class="mobile-profile-inline-actions">
+          <button type="button" class="mobile-text-button" @click="syncForm">重置</button>
+          <button type="button" class="mobile-text-button" @click="userStore.logout()">退出登录</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mobile-license-section">
+      <h2 class="mobile-section-title">我的授权码</h2>
+      <div v-if="loading && licenses.length === 0" class="mobile-empty-card">
+        <div class="ui-empty-emoji">📧</div>
+        <div>正在同步授权码状态...</div>
+      </div>
+      <div v-else-if="licenses.length === 0" class="mobile-empty-card">
+        <div class="ui-empty-emoji">🪪</div>
+        <div>当前账号还没有授权码记录。</div>
+      </div>
+      <div v-else class="mobile-license-list">
+        <article v-for="license in licenses" :key="license.id" class="mobile-license-card">
+          <div class="mobile-license-top">
+            <span class="mobile-license-label">当前授权码</span>
+            <AppStatusBadge :label="statusLabel(license.status)" :tone="statusTone(license.status)" />
+          </div>
+          <div class="mobile-license-code">{{ license.code }}</div>
+          <div class="mobile-license-pills">
+            <span class="mobile-license-mini">{{ formatTime(license.activatedAt) ? '已激活' : '未激活' }}</span>
+            <span class="mobile-license-mini is-danger" v-if="license.status === 'REVOKED'">已过期</span>
+            <span class="mobile-license-mini is-success" v-else>已激活</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <section class="page-title-block">
       <div>
         <h1 class="page-title">个人中心</h1>

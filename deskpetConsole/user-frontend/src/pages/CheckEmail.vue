@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useResponsive } from '@/composables/useResponsive'
 
 const route = useRoute()
+const { isMobile } = useResponsive()
 
 const email = computed(() => {
   const value = route.query.email
@@ -50,7 +52,28 @@ const content = computed(() => {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div v-if="isMobile" class="mobile-auth-page">
+    <section class="mobile-status-card">
+      <div class="mobile-status-icon">✉</div>
+      <h1 class="mobile-status-title">{{ purpose === 'activation' ? '注册成功' : '邮件已发送' }}</h1>
+      <p class="mobile-status-description">{{ content.description }}</p>
+
+      <section class="mobile-status-note">
+        <div class="mobile-note-title">建议操作</div>
+        <p class="mobile-note-text">1. {{ content.steps[0] }}</p>
+        <p class="mobile-note-text">2. {{ content.steps[1] }}</p>
+        <p class="mobile-note-text">3. {{ content.steps[2] }}</p>
+      </section>
+
+      <RouterLink :to="content.backTo" class="mobile-submit-button mobile-submit-link">{{ content.backLabel }}</RouterLink>
+      <p class="mobile-auth-footnote">
+        已完成验证？
+        <RouterLink :to="content.backTo" class="mobile-inline-link">返回登录</RouterLink>
+      </p>
+    </section>
+  </div>
+
+  <div v-else class="page-stack">
     <div>
       <div class="ui-kicker">{{ content.kicker }}</div>
       <h2 style="margin: 12px 0 0; font-size: 32px; line-height: 1.2; letter-spacing: -0.03em;">{{ content.title }}</h2>

@@ -5,6 +5,10 @@ import AppBrand from '@/components/ui/AppBrand.vue'
 import { useResponsive } from '@/composables/useResponsive'
 import { useUserStore } from '@/stores/user'
 import { useDeviceStore } from '@/stores/device'
+import homeIcon from '@/icon/设备总览.svg'
+import devicesIcon from '@/icon/设备管理.svg'
+import activateIcon from '@/icon/激活.svg'
+import profileIcon from '@/icon/用户.svg'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,10 +17,10 @@ const userStore = useUserStore()
 const deviceStore = useDeviceStore()
 
 const navItems = [
-  { label: '首页', name: 'home', path: '/home', icon: '◰' },
-  { label: '设备', name: 'devices', path: '/devices', icon: '▦' },
-  { label: '激活', name: 'activate', path: '/activate', icon: '⚡' },
-  { label: '我的', name: 'profile', path: '/profile', icon: '◎' },
+  { label: '首页', name: 'home', path: '/home', icon: homeIcon },
+  { label: '设备', name: 'devices', path: '/devices', icon: devicesIcon },
+  { label: '激活', name: 'activate', path: '/activate', icon: activateIcon },
+  { label: '我的', name: 'profile', path: '/profile', icon: profileIcon },
 ] as const
 
 const activeName = computed(() => {
@@ -88,7 +92,7 @@ onMounted(async () => {
             class="console-nav-item"
             :class="activeName === item.name ? 'is-active' : ''"
           >
-            <span class="console-nav-icon">{{ item.icon }}</span>
+            <img :src="item.icon" :alt="`${item.label}图标`" class="console-nav-icon">
             <span>{{ item.label }}</span>
           </RouterLink>
         </nav>
@@ -133,7 +137,7 @@ onMounted(async () => {
           :class="mobileActiveName === item.name ? 'active' : ''"
           @click="goTo(item.path)"
         >
-          <span style="font-size: 16px; line-height: 1;">{{ item.icon }}</span>
+          <img :src="item.icon" :alt="`${item.label}图标`" class="mobile-tabbar-icon">
           <span>{{ item.label }}</span>
         </button>
       </nav>

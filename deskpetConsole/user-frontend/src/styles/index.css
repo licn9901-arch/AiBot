@@ -799,9 +799,16 @@ a {
 }
 
 .console-nav-icon {
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.88;
+}
+
+.console-nav-item.is-active .console-nav-icon {
+  filter: brightness(0) invert(1);
+  opacity: 1;
 }
 
 .console-online-card {
@@ -1767,6 +1774,19 @@ a {
   color: #ffffff;
 }
 
+.mobile-tabbar-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.88;
+}
+
+.mobile-tabbar-item.active .mobile-tabbar-icon {
+  filter: brightness(0) invert(1);
+  opacity: 1;
+}
+
 .mobile-page-heading,
 .mobile-title-stack {
   display: grid;
@@ -1939,6 +1959,13 @@ a {
 .mobile-license-section {
   display: grid;
   gap: 12px;
+}
+
+.mobile-license-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  min-height: 168px;
 }
 
 .mobile-section-head,
@@ -2239,6 +2266,35 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.mobile-license-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mobile-license-detail-item {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.mobile-license-detail-label {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.mobile-license-detail-value {
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+  word-break: break-word;
 }
 
 .mobile-license-mini.is-danger {

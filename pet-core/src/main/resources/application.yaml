@@ -76,7 +76,7 @@ command:
   timeoutScanMs: 2000
 
 gateway:
-  baseUrl: http://localhost:8081
+  baseUrl: http://mqtt-gateway:8081
 
 auth:
   frontend-base-url: ${AUTH_FRONTEND_BASE_URL:http://localhost:5174}

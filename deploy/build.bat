@@ -44,11 +44,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM echo [2/4] Building pet-core image...
-REM docker build -t "%REGISTRY%/pet-core:%TAG%" "%PROJECT_ROOT%\pet-core"
+echo [2/4] Building pet-core image...
+docker build -t "%REGISTRY%/pet-core:%TAG%" "%PROJECT_ROOT%\pet-core"
 
-echo [3/4] Building mqtt-gateway image...
-docker build -t "%REGISTRY%/mqtt-gateway:%TAG%" "%PROJECT_ROOT%\mqtt-gateway"
+REM echo [3/4] Building mqtt-gateway image...
+REM docker build -t "%REGISTRY%/mqtt-gateway:%TAG%" "%PROJECT_ROOT%\mqtt-gateway"
 
 REM echo [4/4] Building pet-ai image...
 REM docker build -t "%REGISTRY%/pet-ai:%TAG%" "%PROJECT_ROOT%\pet-ai"
@@ -64,8 +64,8 @@ if not "%REGISTRY%"=="" (
     set /p confirm="Push images to %REGISTRY%? (y/N) "
     if /i "!confirm!"=="y" (
         echo Pushing images...
-        REM docker push "%REGISTRY%/pet-core:%TAG%"
-        docker push "%REGISTRY%/mqtt-gateway:%TAG%"
+        docker push "%REGISTRY%/pet-core:%TAG%"
+        REM docker push "%REGISTRY%/mqtt-gateway:%TAG%"
         REM docker push "%REGISTRY%/pet-ai:%TAG%"
         echo Push complete!
     )

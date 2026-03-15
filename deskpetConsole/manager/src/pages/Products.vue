@@ -196,8 +196,12 @@ async function handleIconSelected(event: Event) {
       })
       const index = products.value.findIndex(item => item.productKey === editingKey.value)
       if (index >= 0) {
+        const currentProduct = products.value[index]
+        if (!currentProduct) {
+          return
+        }
         products.value[index] = {
-          ...products.value[index],
+          ...currentProduct,
           icon: response.url,
           iconKey: response.objectKey
         }

@@ -30,10 +30,10 @@ services:
       POSTGRES_PASSWORD: deskpet
       POSTGRES_DB: deskpet_ts
     ports:
-      - "5433:5433"
+      - "5433:5432"
     volumes:
       - deskpet-tsdb-data:/var/lib/postgresql/data
-#      - ./timescaledb-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./timescaledb-init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${TSDB_USER}"]
       interval: 5s
@@ -107,23 +107,23 @@ services:
     networks:
       - deskpet-internal
 
-  pet-ai:
-    image: ${REGISTRY:-}deskpet/pet-ai:${TAG:-latest}
-    container_name: deskpet-ai
-    environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
-      OPENAI_MODEL: ${OPENAI_MODEL}
-      PET_CORE_URL: http://pet-core:8080
-      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC"
-    ports:
-      - "8090:8090"
-    depends_on:
-      pet-core:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - deskpet-internal
+#  pet-ai:
+#    image: ${REGISTRY:-}deskpet/pet-ai:${TAG:-latest}
+#    container_name: deskpet-ai
+#    environment:
+#      OPENAI_API_KEY: ${OPENAI_API_KEY}
+#      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+#      OPENAI_MODEL: ${OPENAI_MODEL}
+#      PET_CORE_URL: http://pet-core:8080
+#      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC"
+#    ports:
+#      - "8090:8090"
+#    depends_on:
+#      pet-core:
+#        condition: service_started
+#    restart: unless-stopped
+#    networks:
+#      - deskpet-internal
 
 volumes:
   deskpet-db-data:

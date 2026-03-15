@@ -75,6 +75,10 @@ function statusTone(status: LicenseStatus) {
   return 'warning'
 }
 
+function mobileBindingLabel(deviceId?: string | null) {
+  return deviceId ? '已绑定设备' : '未绑定设备'
+}
+
 async function fetchLicenses() {
   loading.value = true
   try {
@@ -232,9 +236,20 @@ onBeforeUnmount(() => {
           </div>
           <div class="mobile-license-code">{{ license.code }}</div>
           <div class="mobile-license-pills">
-            <span class="mobile-license-mini">{{ formatTime(license.activatedAt) ? '已激活' : '未激活' }}</span>
-            <span class="mobile-license-mini is-danger" v-if="license.status === 'REVOKED'">已过期</span>
-            <span class="mobile-license-mini is-success" v-else>已激活</span>
+            <span class="mobile-license-mini" :class="license.deviceId ? 'is-success' : 'is-danger'">
+              {{ mobileBindingLabel(license.deviceId) }}
+            </span>
+            <span class="mobile-license-mini">{{ license.deviceId || '等待绑定' }}</span>
+          </div>
+          <div class="mobile-license-details">
+            <div class="mobile-license-detail-item">
+              <span class="mobile-license-detail-label">激活时间</span>
+              <span class="mobile-license-detail-value">{{ formatTime(license.activatedAt) || '尚未激活' }}</span>
+            </div>
+            <div class="mobile-license-detail-item">
+              <span class="mobile-license-detail-label">过期时间</span>
+              <span class="mobile-license-detail-value">{{ formatTime(license.expiresAt) || '长期有效' }}</span>
+            </div>
           </div>
         </article>
       </div>
